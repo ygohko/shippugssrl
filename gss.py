@@ -33,8 +33,12 @@ import pygame
 import random
 import math
 
-rand = random.Random()
-rand.seed()
+enemy_rand = random.Random()
+enemy_rand.seed(123)
+effect_rand = random.Random()
+effect_rand.seed(456)
+contestant_rand = random.Random()
+contestant_rand.seed(789)
 
 VERSION = "1.0.0"
 SCREEN_WIDTH = 640
@@ -60,9 +64,17 @@ def Sign(val):
 def Radian(deg):
 	return (deg * 2.0 * math.pi) / 360.0
 
-def RandomVector(length):
-	x = (random.randrange(128) + 1) * (random.randrange(2) * 3 - 1)
-	y = (random.randrange(128) + 1) * (random.randrange(2) * 3 - 1)
+def RandomEnemyVector(length):
+	x = (enemy_rand.randrange(128) + 1) * (enemy_rand.randrange(2) * 3 - 1)
+	y = (enemy_rand.randrange(128) + 1) * (enemy_rand.randrange(2) * 3 - 1)
+	current_length = math.sqrt(x * x + y * y)
+	x = int(float(x) * length / current_length)
+	y = int(float(y) * length / current_length)
+	return (x,y)
+
+def RandomEffectVector(length):
+	x = (effect_rand.randrange(128) + 1) * (effect_rand.randrange(2) * 3 - 1)
+	y = (effect_rand.randrange(128) + 1) * (effect_rand.randrange(2) * 3 - 1)
 	current_length = math.sqrt(x * x + y * y)
 	x = int(float(x) * length / current_length)
 	y = int(float(y) * length / current_length)
@@ -194,7 +206,7 @@ class Player(Actor):
 			smoke_cnt += 1
 			smoke_cnt &= 1
 			if smoke_cnt == 0:
-				Shooting.scene.explosions.Append(Smoke(self.x,self.y,Fixed(-18) + Fixed(rand.randrange(3) - 1),Fixed(rand.randrange(3) - 1)))
+				Shooting.scene.explosions.Append(Smoke(self.x,self.y,Fixed(-18) + Fixed(effect_rand.randrange(3) - 1),Fixed(effect_rand.randrange(3) - 1)))
 			yield None
 		self.state = Player.MOVE
 		self.nocol_cnt = 120
@@ -244,7 +256,7 @@ class Player(Actor):
 		Shooting.scene.status.ResetMultilier()
 		Gss.data.explosion_large_sound.play()
 		for i in range(10):
-			velocity = RandomVector(Fixed(random.randrange(8)))
+			velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
 			Shooting.scene.explosions.Append(PlayerExplosion(self.x,self.y,velocity[0],velocity[1]))
 		self.state = Player.DESTROY
 		self.gen = self.Destroy()
@@ -307,22 +319,22 @@ class Enemy(Actor):
 
 			# »à
 			Gss.data.explosion_small_sound.play()
-			type = random.randrange(10)
+			type = effect_rand.randrange(10)
 			if type < 8:
-				velocity = RandomVector(Fixed(random.randrange(8)) / 8)
+				velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)) / 8)
 				velocity_x = self.velocity_x + velocity[0]
 				velocity_y = self.velocity_y + velocity[1]
 				Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
 			elif type == 8:
 				for i in range(8):
-					velocity = RandomVector(Fixed(random.randrange(8)))
+					velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
 					velocity_x = self.velocity_x + velocity[0]
 					velocity_y = self.velocity_y + velocity[1]
 					Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
 			else:
-				base_velocity = RandomVector(Fixed(2))
+				base_velocity = RandomEffectVector(Fixed(2))
 				for i in range(8):
-					velocity = RandomVector(Fixed(1))
+					velocity = RandomEffectVector(Fixed(1))
 					velocity_x = self.velocity_x + base_velocity[0] * i + velocity[0]
 					velocity_y = self.velocity_y + base_velocity[1] * i + velocity[1]
 					Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
@@ -384,7 +396,7 @@ class StraightBulletEnemy(Enemy):
 			self.y += self.velocity_y
 			cnt += 1
 			if (cnt & 7) == 0:
-				Shooting.scene.bullets.Append(Bullet(self.x,self.y,Fixed(rand.randrange(5) + 0.2),Fixed(rand.randrange(4) * 2 - 3)))
+				Shooting.scene.bullets.Append(Bullet(self.x,self.y,Fixed(enemy_rand.randrange(5) + 0.2),Fixed(enemy_rand.randrange(4) * 2 - 3)))
 			yield None
 
 class StayEnemy(Enemy):
@@ -412,7 +424,7 @@ class StayEnemy(Enemy):
 			self.y += self.velocity_y
 			cnt += 1
 			if cnt > 60 and (cnt & 31) == 0:
-				Shooting.scene.bullets.Append(Bullet(self.x,self.y,Fixed(-5),Fixed(rand.randrange(7) - 3)))
+				Shooting.scene.bullets.Append(Bullet(self.x,self.y,Fixed(-5),Fixed(enemy_rand.randrange(7) - 3)))
 			yield None
 
 class RollEnemy(Enemy):
@@ -588,17 +600,17 @@ class MiddleEnemy(Enemy):
 			self.velocity_y += Fixed(0.005)
 			self.x += self.velocity_x
 			self.y += self.velocity_y
-			if rand.randrange(16) == 0:
+			if effect_rand.randrange(16) == 0:
 				Gss.data.explosion_small_sound.play()
-			if rand.randrange(8) == 0:
-				x = self.x + Fixed(random.randrange(64) - 32)
-				y = self.y + Fixed(random.randrange(64) - 32)
-				velocity = RandomVector(Fixed(random.randrange(8)))
+			if effect_rand.randrange(8) == 0:
+				x = self.x + Fixed(effect_rand.randrange(64) - 32)
+				y = self.y + Fixed(effect_rand.randrange(64) - 32)
+				velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
 				Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
 			yield None
 		Gss.data.explosion_sound.play()
 		for i in range(8):
-			velocity = RandomVector(Fixed(random.randrange(8)))
+			velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
 			x = self.x + velocity[0] * 3
 			y = self.y + velocity[1] * 3
 			Shooting.scene.explosions.Append(BigExplosion(x,y,velocity[0],velocity[1]))
@@ -612,7 +624,7 @@ class MiddleEnemy(Enemy):
 		while True:
 			for i in range(interval):
 				yield None
-			Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player) + Radian(rand.randrange(32) - 16),5))
+			Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player) + Radian(enemy_rand.randrange(32) - 16),5))
 			interval -= 1
 			if interval <= 0:
 				interval = 1
@@ -733,8 +745,8 @@ class BossEnemy(Enemy):
 				self.x += self.velocity_x
 				self.y += self.velocity_y
 				if (i & 1) == 0:
-					velocity = RandomVector(Fixed(random.randrange(4)))
-					Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(random.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
+					velocity = RandomEffectVector(Fixed(effect_rand.randrange(4)))
+					Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(effect_rand.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
 				yield None
 			for i in range(60):
 				if self.velocity_y < self.target_velocity_y:
@@ -744,7 +756,7 @@ class BossEnemy(Enemy):
 						self.velocity_y += Fixed(-0.02)
 				self.x += self.velocity_x
 				self.y += self.velocity_y
-				Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128),self.y + Fixed(random.randrange(256) - 128),Fixed(-16),Fixed(0)))
+				Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128),self.y + Fixed(enemy_rand.randrange(256) - 128),Fixed(-16),Fixed(0)))
 				yield None
 
 	def GoBerserk(self):
@@ -755,13 +767,13 @@ class BossEnemy(Enemy):
 				self.x += self.velocity_x
 				self.y += self.velocity_y
 				if (i & 1) == 0:
-					velocity = RandomVector(Fixed(random.randrange(4)))
-					Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(random.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
+					velocity = RandomEffectVector(Fixed(effect_rand.randrange(4)))
+					Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(effect_rand.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
 				yield None
 			for i in range(60):
 				self.x += self.velocity_x
 				self.y += self.velocity_y
-				Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128),self.y + Fixed(random.randrange(256) - 128),Fixed(-16),Fixed(0)))
+				Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128),self.y + Fixed(enemy_rand.randrange(256) - 128),Fixed(-16),Fixed(0)))
 				yield None
 			for i in range(45):
 				self.x += self.velocity_x
@@ -813,17 +825,17 @@ class BossEnemy(Enemy):
 			self.velocity_y = (self.velocity_y * 254) / 256
 			self.x += self.velocity_x
 			self.y += self.velocity_y
-			if rand.randrange(16) == 0:
+			if effect_rand.randrange(16) == 0:
 				Gss.data.explosion_small_sound.play()
-			if rand.randrange(3) == 0:
-				x = self.x + Fixed(random.randrange(128) - 64)
-				y = self.y + Fixed(random.randrange(128) - 64)
-				velocity = RandomVector(Fixed(random.randrange(8)))
+			if effect_rand.randrange(3) == 0:
+				x = self.x + Fixed(effect_rand.randrange(128) - 64)
+				y = self.y + Fixed(effect_rand.randrange(128) - 64)
+				velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
 				Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
 			yield None
 		Gss.data.explosion_sound.play()
 		for i in range(64):
-			velocity = RandomVector(Fixed(random.randrange(24)))
+			velocity = RandomEffectVector(Fixed(effect_rand.randrange(24)))
 			x = self.x + velocity[0] * 3
 			y = self.y + velocity[1] * 3
 			Shooting.scene.explosions.Append(BigExplosion(x,y,velocity[0],velocity[1]))
@@ -959,7 +971,7 @@ class BossPartEnemy(Enemy):
 		if self.parent != None:
 			Gss.data.explosion_sound.play()
 			for i in range(16):
-				velocity = RandomVector(Fixed(random.randrange(12)))
+				velocity = RandomEffectVector(Fixed(effect_rand.randrange(12)))
 				Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity[0],velocity[1]))
 			if self.offset_y > 0:
 				inc_velocity_y = Fixed(-4)
@@ -1112,7 +1124,7 @@ class Missile(Enemy):
 			smoke_cnt += 1
 			smoke_cnt &= 1
 			if smoke_cnt == 0:
-				Shooting.scene.explosions.Append(Smoke(self.x + Fixed(cos_val * -10),self.y + Fixed(sin_val * -10),Fixed(cos_val * -5) + Fixed(rand.randrange(256) - 128) / 256,Fixed(sin_val * -5) + Fixed(rand.randrange(256) - 128) / 256))
+				Shooting.scene.explosions.Append(Smoke(self.x + Fixed(cos_val * -10),self.y + Fixed(sin_val * -10),Fixed(cos_val * -5) + Fixed(effect_rand.randrange(256) - 128) / 256,Fixed(sin_val * -5) + Fixed(effect_rand.randrange(256) - 128) / 256))
 			yield None
 
 class Bullet(Actor):
@@ -1148,7 +1160,7 @@ class Bullet(Actor):
 	def FromAngleSpread(cls,x,y,angle,speed,power,num):
 		bullets = []
 		for i in range(num):
-			offset_vector = RandomVector(random.randrange(Fixed(power)))
+			offset_vector = RandomEnemyVector(enemy_rand.randrange(Fixed(power)))
 			velocity_x = Fixed(math.cos(angle) * speed) + offset_vector[0]
 			velocity_y = Fixed(math.sin(angle) * speed) + offset_vector[1]
 			bullets.append(Bullet(x,y,velocity_x,velocity_y))
@@ -1227,13 +1239,13 @@ class BulletExplosion(Explosion):
 class Star(Actor):
 	def __init__(self):
 		Actor.__init__(self)
-		self.x = Fixed(random.randrange(SCREEN_WIDTH))
-		self.y = Fixed(random.randrange(SCREEN_HEIGHT))
+		self.x = Fixed(effect_rand.randrange(SCREEN_WIDTH))
+		self.y = Fixed(effect_rand.randrange(SCREEN_HEIGHT))
 		self.sprite = Sprite(Gss.data.star_surface,-32,-8,64,16)
 		self.collision = Collision(Fixed(-32),Fixed(-8),Fixed(32),Fixed(8))
 		self.velocity_x = 0
 		self.velocity_y = 0
-		self.speed = random.randrange(255) + 16
+		self.speed = effect_rand.randrange(255) + 16
 
 	def Process(self):
 		self.velocity_x = self.speed * Shooting.scene.status.GetEventSpeed() / -16
@@ -1241,8 +1253,8 @@ class Star(Actor):
 		self.y += self.velocity_y
 		if self.CheckSceneOut() == True:
 			self.x = Fixed(SCREEN_WIDTH + 32)
-			self.y = Fixed(random.randrange(SCREEN_HEIGHT))
-			self.speed = random.randrange(255) + 16
+			self.y = Fixed(effect_rand.randrange(SCREEN_HEIGHT))
+			self.speed = effect_rand.randrange(255) + 16
 
 class Ending:
 	def __init__(self):
@@ -1506,6 +1518,7 @@ class Status:
 		self.event_speed = Fixed(1)
 		self.lap_time = 0
 		self.completed = False
+		self.contestant_score = 0;
 
 	def IncrementFrameNum(self):
 		self.frame_num += 1
@@ -1557,6 +1570,7 @@ class Status:
 
 	def SetCompleted(self):
 		self.completed = True
+		self.contestant_score = ScreenInt(self.event_count)
 
 	def GetCompleted(self):
 		return self.completed
@@ -1570,7 +1584,10 @@ class Status:
 		if display_player_stock < 0:
 			display_player_stock = 0
 		ticks = pygame.time.get_ticks() - self.begin_ticks
-		fps = (self.frame_num * 1000) / ticks
+		if ticks > 0:
+			fps = (self.frame_num * 1000) / ticks
+		else:
+			fps = 99
 		Gss.data.font.DrawString("PLAYER STOCK:     %1d  FRAME RATE:     %03d" % (display_player_stock,fps),screen_surface,0,16)
 
 class Scene:
@@ -1721,12 +1738,10 @@ class Joystick:
 		return self.trigger
 
 class EmulatedJoystick(Joystick):
-	def __init__(self):
+	def __init__(self, movements):
 		super().__init__()
 		self.position = -1
-		self.movements = []
-		for i in range(4 * 60 * 60):
-			self.movements.append(random.randrange(16))
+		self.movements = movements
 
 	def Update(self):
 		self.position += 1
@@ -1744,6 +1759,60 @@ class EmulatedJoystick(Joystick):
 	def GetTrigger(self):
 		return self.trigger
 
+class Contestant:
+	def __init__(self):
+		self.movements = []
+		for i in range(4 * 60 * 60):
+			self.movements.append(contestant_rand.randrange(16))
+		self.score = 0
+
+	def Clone(self):
+		contestant = Contestant()
+		contestant.movements = self.movements[:]
+		contestant.score = self.score
+		return contestant
+
+	def Cross(self,contestant):
+		for i in range(len(self.movements)):
+			if contestant_rand.randrange(2) == 1:
+				value = self.movements[i]
+				self.movements[i] = contestant.movements[i]
+				contestant.movements[i] = value
+
+	def GetMovements(self):
+		return self.movements
+
+	def GetScore(self):
+		return self.score
+
+	def SetScore(self, score):
+		self.score = score
+
+	def GetAlternated(cls, contestants):
+		elite = None
+		elite_score = 0
+		scores = []
+		for contestant in contestants:
+			score = contestant.GetScore()
+			scores.append(score)
+			if score > elite_score:
+				elite = contestant
+				elite_score = score
+		new_contestants = []
+		new_contestants.append(elite)
+		scores = sorted(scores, reverse=True)[1:5]
+		for contestant in contestants:
+			score = contestant.GetScore()
+			if score in scores:
+				a_elite = elite.Clone()
+				a_contestant = contestant.Clone()
+				a_contestant.Cross(a_elite)
+				new_contestants.append(a_elite)
+				new_contestants.append(a_contestant)
+		new_contestants.append(Contestant())
+		return new_contestants
+	GetAlternated = classmethod(GetAlternated)
+
 class Gss:
 	screen_surface = None
 	joystick = None
@@ -1758,14 +1827,30 @@ class Gss:
 		pygame.joystick.init()
 		Gss.joystick = Joystick()
 		Gss.data = Data()
+		self.generation = 1
+		self.contestants = []
+		for i in range(10):
+			self.contestants.append(Contestant())
+		self.contestant_index = 0
 
 	def Main(self):
 		while True:
 			if Title().MainLoop() == Title.STATE_EXIT_QUIT:
 				return
-			Gss.joystick = EmulatedJoystick()
-			Shooting().MainLoop()
+			Gss.joystick = EmulatedJoystick(self.contestants[self.contestant_index].GetMovements())
+			enemy_rand.seed(123)
+			effect_rand.seed(456)
+			shooting = Shooting()
+			shooting.MainLoop()
+			score = shooting.scene.status.contestant_score
+			self.contestants[self.contestant_index].SetScore(score)
+			print("Generation: {} Contestant: {} Score: {}".format(self.generation, self.contestant_index, score))
 			Gss.joystick = Joystick()
+			self.contestant_index += 1
+			if self.contestant_index >= 10:
+				self.contestants = Contestant.GetAlternated(self.contestants)
+				self.contestant_index = 0
+				self.generation += 1
 
 class LogoPart(Actor):
 	def __init__(self,x,y):
