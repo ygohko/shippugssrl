@@ -1,13 +1,33 @@
 # -*- coding: euc-jp -*-
 
+# Copyright (c) 2005 - 2020 Yasuaki Gohko
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE ABOVE LISTED COPYRIGHT HOLDER(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
 # for Python 2.2
 from __future__ import generators
-try:
-	True
-	False
-except:
-	True = (1 == 1)
-	False = (1 != 1)
+# try:
+# 	True
+# 	False
+# except:
+# 	True = (1 == 1)
+# 	False = (1 != 1)
 
 import pygame
 import random
@@ -25,7 +45,7 @@ FIXED_HEIGHT = SCREEN_HEIGHT * FIXED_MUL
 JOYSTICK_THRESHOLD = 0.5
 
 def ScreenInt(val):
-	return val / FIXED_MUL
+	return int(val / FIXED_MUL)
 
 def Fixed(val):
 	return int(val * FIXED_MUL)
@@ -154,7 +174,7 @@ class Player(Actor):
 		self.gen = self.Appear()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 
 	def Draw(self,screen_surface):
 		if self.state == Player.APPEAR \
@@ -167,7 +187,7 @@ class Player(Actor):
 		yield None
 		smoke_cnt = 0
 		velocity_x = Fixed(16)
-		for i in xrange(30):
+		for i in range(30):
 			velocity_x -= Fixed(1)
 			self.x += velocity_x + Fixed(2)
 			self.y -= Fixed(10)
@@ -207,7 +227,7 @@ class Player(Actor):
 			yield None
 
 	def Destroy(self):
-		for i in xrange(30):
+		for i in range(30):
 			yield None
 		player_stock = Shooting.scene.status.DecrementPlayerStock(1)
 
@@ -223,7 +243,7 @@ class Player(Actor):
 	def AddDamage(self,damage):
 		Shooting.scene.status.ResetMultilier()
 		Gss.data.explosion_large_sound.play()
-		for i in xrange(10):
+		for i in range(10):
 			velocity = RandomVector(Fixed(random.randrange(8)))
 			Shooting.scene.explosions.Append(PlayerExplosion(self.x,self.y,velocity[0],velocity[1]))
 		self.state = Player.DESTROY
@@ -294,14 +314,14 @@ class Enemy(Actor):
 				velocity_y = self.velocity_y + velocity[1]
 				Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
 			elif type == 8:
-				for i in xrange(8):
+				for i in range(8):
 					velocity = RandomVector(Fixed(random.randrange(8)))
 					velocity_x = self.velocity_x + velocity[0]
 					velocity_y = self.velocity_y + velocity[1]
 					Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
 			else:
 				base_velocity = RandomVector(Fixed(2))
-				for i in xrange(8):
+				for i in range(8):
 					velocity = RandomVector(Fixed(1))
 					velocity_x = self.velocity_x + base_velocity[0] * i + velocity[0]
 					velocity_y = self.velocity_y + base_velocity[1] * i + velocity[1]
@@ -326,7 +346,7 @@ class StraightEnemy(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -353,7 +373,7 @@ class StraightBulletEnemy(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -377,7 +397,7 @@ class StayEnemy(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -409,7 +429,7 @@ class RollEnemy(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -425,9 +445,9 @@ class RollEnemy(Enemy):
 			yield None
 
 	def Roll(self):
-		for i in xrange(60):
+		for i in range(60):
 			yield 0.0
-		for i in xrange(225):
+		for i in range(225):
 			yield Radian(i * 1.2)
 		while True:
 			yield Radian(270.0)
@@ -445,7 +465,7 @@ class BackwordEnemy(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -476,7 +496,7 @@ class VerticalMissileEnemy(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -487,7 +507,7 @@ class VerticalMissileEnemy(Enemy):
 			if self.x < (Shooting.scene.player.x + Fixed(32)):
 				done = True
 			yield None
-		for i in xrange(16):
+		for i in range(16):
 			self.velocity_x = int((Shooting.scene.player.x - self.x) * 0.1)
 			self.x += self.velocity_x
 			self.y += self.velocity_y
@@ -517,7 +537,7 @@ class StraightMissileEnemy(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -544,27 +564,27 @@ class MiddleEnemy(Enemy):
 		self.collision = Collision(Fixed(-64),Fixed(-64),Fixed(64),Fixed(64))
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
 		shoot_gen = self.Shoot()
-		for i in xrange(480):
+		for i in range(480):
 			if self.velocity_x < Fixed(-1):
 				self.velocity_x += Fixed(0.1)
 			self.x += self.velocity_x
 			self.y += self.velocity_y
-			shoot_gen.next()
+			shoot_gen.__next__()
 			yield None
 		while True:
 			self.velocity_x -= Fixed(0.1)
 			self.x += self.velocity_x
 			self.y += self.velocity_y
-			shoot_gen.next()
+			shoot_gen.__next__()
 			yield None
 
 	def Destroy(self):
-		for i in xrange(120):
+		for i in range(120):
 			self.velocity_y += Fixed(0.005)
 			self.x += self.velocity_x
 			self.y += self.velocity_y
@@ -577,20 +597,20 @@ class MiddleEnemy(Enemy):
 				Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
 			yield None
 		Gss.data.explosion_sound.play()
-		for i in xrange(8):
+		for i in range(8):
 			velocity = RandomVector(Fixed(random.randrange(8)))
- 			x = self.x + velocity[0] * 3
+			x = self.x + velocity[0] * 3
 			y = self.y + velocity[1] * 3
 			Shooting.scene.explosions.Append(BigExplosion(x,y,velocity[0],velocity[1]))
 		Shooting.scene.enemies.Remove(self)
 		yield None
 
 	def Shoot(self):
-		for i in xrange(120):
+		for i in range(120):
 			yield None
 		interval = 26
 		while True:
-			for i in xrange(interval):
+			for i in range(interval):
 				yield None
 			Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player) + Radian(rand.randrange(32) - 16),5))
 			interval -= 1
@@ -612,12 +632,12 @@ class MiddleMissileEnemy(MiddleEnemy):
 		MiddleEnemy.__init__(self,x,y)
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
 		cnt = 0
-		for i in xrange(480):
+		for i in range(480):
 			if self.velocity_x < Fixed(-1):
 				self.velocity_x += Fixed(0.1)
 			self.x += self.velocity_x
@@ -656,15 +676,15 @@ class BossEnemy(Enemy):
 			Shooting.scene.enemies.Append(child)
 
 	def Process(self):
-		self.gen.next()
-		self.watch_children_gen.next()
+		self.gen.__next__()
+		self.watch_children_gen.__next__()
 		for child in self.children:
 			if child != None:
 				child.UpdatePosition()
 
 	def SplitChild(self,child):
-		for i in xrange(len(self.children)):
- 			if self.children[i] is child:
+		for i in range(len(self.children)):
+			if self.children[i] is child:
 				self.children[i] = None
 				grandchild_index = BossEnemy.GRANDCHILD_INDEX_LIST[i]
 				if grandchild_index != None:
@@ -690,7 +710,7 @@ class BossEnemy(Enemy):
 
 	def Move(self):
 		while True:
-			for i in xrange(120):
+			for i in range(120):
 				if self.y < Fixed(120):
 					self.target_velocity_y = Fixed(1.5)
 				else:
@@ -704,7 +724,7 @@ class BossEnemy(Enemy):
 				self.x += self.velocity_x
 				self.y += self.velocity_y
 				yield None
-			for i in xrange(60):
+			for i in range(60):
 				if self.velocity_y < self.target_velocity_y:
 					self.velocity_y += Fixed(0.02)
 				else:
@@ -716,7 +736,7 @@ class BossEnemy(Enemy):
 					velocity = RandomVector(Fixed(random.randrange(4)))
 					Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(random.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
 				yield None
-			for i in xrange(60):
+			for i in range(60):
 				if self.velocity_y < self.target_velocity_y:
 					self.velocity_y += Fixed(0.02)
 				else:
@@ -729,7 +749,7 @@ class BossEnemy(Enemy):
 
 	def GoBerserk(self):
 		while True:
-			for i in xrange(60):
+			for i in range(60):
 				velocity_y = int((Shooting.scene.player.y - self.y) * 0.015)
 				self.velocity_y += int((velocity_y - self.velocity_y) * 0.05)
 				self.x += self.velocity_x
@@ -738,12 +758,12 @@ class BossEnemy(Enemy):
 					velocity = RandomVector(Fixed(random.randrange(4)))
 					Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(random.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
 				yield None
-			for i in xrange(60):
+			for i in range(60):
 				self.x += self.velocity_x
 				self.y += self.velocity_y
 				Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128),self.y + Fixed(random.randrange(256) - 128),Fixed(-16),Fixed(0)))
 				yield None
-			for i in xrange(45):
+			for i in range(45):
 				self.x += self.velocity_x
 				self.y += self.velocity_y
 				yield None
@@ -757,7 +777,7 @@ class BossEnemy(Enemy):
 			yield None
 
 		has_splited_child = False
-		for i in xrange(len(self.children)):
+		for i in range(len(self.children)):
 			child = self.children[i]
 			if child == None:
 				pair_child_index = BossEnemy.PAIR_CHILD_INDEX_LIST[i]
@@ -789,7 +809,7 @@ class BossEnemy(Enemy):
 		yield None
 
 	def Destroy(self):
-		for i in xrange(180):
+		for i in range(180):
 			self.velocity_y = (self.velocity_y * 254) / 256
 			self.x += self.velocity_x
 			self.y += self.velocity_y
@@ -802,9 +822,9 @@ class BossEnemy(Enemy):
 				Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
 			yield None
 		Gss.data.explosion_sound.play()
-		for i in xrange(64):
+		for i in range(64):
 			velocity = RandomVector(Fixed(random.randrange(24)))
- 			x = self.x + velocity[0] * 3
+			x = self.x + velocity[0] * 3
 			y = self.y + velocity[1] * 3
 			Shooting.scene.explosions.Append(BigExplosion(x,y,velocity[0],velocity[1]))
 		Shooting.scene.enemies.Remove(self)
@@ -819,12 +839,12 @@ class BossEnemy(Enemy):
 						battery_enemy_exists = True
 						child.ToMove()
 			if battery_enemy_exists == True:
-				for i in xrange(128):
+				for i in range(128):
 					yield None
 				for child in self.children:
 					if child != None:
 						child.ToIdle()
-				for i in xrange(64):
+				for i in range(64):
 					yield None
 			spreadbullet_enemy_exists = False
 			for child in self.children:
@@ -833,12 +853,12 @@ class BossEnemy(Enemy):
 						spreadbullet_enemy_exists = True
 						child.ToMove()
 			if spreadbullet_enemy_exists == True:
-				for i in xrange(128):
+				for i in range(128):
 					yield None
 				for child in self.children:
 					if child != None:
 						child.ToIdle()
-				for i in xrange(64):
+				for i in range(64):
 					yield None
 			missile_enemy_exists = False
 			for child in self.children:
@@ -847,12 +867,12 @@ class BossEnemy(Enemy):
 						missile_enemy_exists = True
 						child.ToMove()
 			if missile_enemy_exists == True:
-				for i in xrange(128):
+				for i in range(128):
 					yield None
 				for child in self.children:
 					if child != None:
 						child.ToIdle()
-				for i in xrange(64):
+				for i in range(64):
 					yield None
 			if battery_enemy_exists == False and missile_enemy_exists == False:
 				yield None
@@ -888,7 +908,7 @@ class BossPartEnemy(Enemy):
 	BOSS_MISSILE_ENEMY = 2
 	BOSS_SPREADBULLET_ENEMY = 3
 
- 	def __init__(self,x,y,parent):
+	def __init__(self,x,y,parent):
 		Enemy.__init__(self)
 		self.offset_x = x
 		self.offset_y = y
@@ -938,7 +958,7 @@ class BossPartEnemy(Enemy):
 	def ToDestroy(self):
 		if self.parent != None:
 			Gss.data.explosion_sound.play()
-			for i in xrange(16):
+			for i in range(16):
 				velocity = RandomVector(Fixed(random.randrange(12)))
 				Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity[0],velocity[1]))
 			if self.offset_y > 0:
@@ -963,12 +983,12 @@ class BossBatteryEnemy(BossPartEnemy):
 		self.gen = self.Idle()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		BossPartEnemy.Process(self)
 
 	def Move(self):
 		while True:
-			for j in xrange(31):
+			for j in range(31):
 				yield None
 			Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player),5))
 			yield None
@@ -991,12 +1011,12 @@ class BossMissileEnemy(BossPartEnemy):
 		self.gen = self.Idle()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		BossPartEnemy.Process(self)
 
 	def Move(self):
 		while True:
-			for j in xrange(31):
+			for j in range(31):
 				yield None
 			Gss.data.missile_sound.play()
 			Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(180)))
@@ -1020,17 +1040,17 @@ class BossSpreadBulletEnemy(BossPartEnemy):
 		self.gen = self.Idle()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		BossPartEnemy.Process(self)
 
 	def Move(self):
 		while True:
-			for j in xrange(63):
+			for j in range(63):
 				yield None
 			for bullet in Bullet.FromAngleSpread(self.x,self.y,self.Search(Shooting.scene.player),2,1,10):
 				Shooting.scene.bullets.Append(bullet)
 			yield None
-			for j in xrange(64):
+			for j in range(64):
 				yield None
  
 	def Idle(self):
@@ -1056,7 +1076,7 @@ class Missile(Enemy):
 		self.gen = self.Move()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		Enemy.Process(self)
 
 	def Move(self):
@@ -1127,7 +1147,7 @@ class Bullet(Actor):
 
 	def FromAngleSpread(cls,x,y,angle,speed,power,num):
 		bullets = []
-		for i in xrange(num):
+		for i in range(num):
 			offset_vector = RandomVector(random.randrange(Fixed(power)))
 			velocity_x = Fixed(math.cos(angle) * speed) + offset_vector[0]
 			velocity_y = Fixed(math.sin(angle) * speed) + offset_vector[1]
@@ -1156,7 +1176,7 @@ class Explosion(Actor):
 		self.x += self.velocity_x
 		self.y += self.velocity_y
 		self.cnt += 1
-		self.sprite.SetFrame(self.cnt / 2)
+		self.sprite.SetFrame(self.cnt // 2)
 		if self.cnt >= 32 or self.CheckSceneOut() == True:
 			Shooting.scene.explosions.Remove(self)
 
@@ -1232,7 +1252,7 @@ class Ending:
 	def Process(self):
 		if self.typewriterstring != None:
 			self.typewriterstring.Process()
-		return self.gen.next()
+		return self.gen.__next__()
 
 	def Draw(self,screen_surface):
 		if self.typewriterstring != None:
@@ -1240,10 +1260,10 @@ class Ending:
 
 	def Move(self):
 		self.typewriterstring = TypewriterString(176,180,"MISSION COMPLETED!")
-		for i in xrange(180):
+		for i in range(180):
 			yield self
 		self.typewriterstring = TypewriterString(272,180,"BUT...")
-		for i in xrange(180):
+		for i in range(180):
 			yield self
 		Shooting.scene.player.Suicide()
 		yield None
@@ -1257,8 +1277,8 @@ class FloatString:
 		self.len  = len(self.string)
 		self.gen = self.Move()
 
- 	def Process(self):
-		return self.gen.next()
+	def Process(self):
+		return self.gen.__next__()
 
 	def Draw(self,screen_surface):
 		x = self.x - self.scale * self.len / 2
@@ -1290,12 +1310,12 @@ class TypewriterString:
 		self.cursor_exists = True
 		self.gen = self.Move()
 
- 	def Process(self):
-		return self.gen.next()
+	def Process(self):
+		return self.gen.__next__()
 
 	def Draw(self,screen_surface):
 		x = self.x
-		for i in xrange(self.num_draw):
+		for i in range(self.num_draw):
 			character = self.string[i]
 			Gss.data.font.Draw(character,screen_surface,x,self.y)
 			x += 16
@@ -1303,15 +1323,15 @@ class TypewriterString:
 			Gss.data.font.Draw("+",screen_surface,x,self.y)
 
 	def Move(self):
-		for i in xrange(self.len):
+		for i in range(self.len):
 			self.num_draw += 1
 			yield False
-		for i in xrange(7):
-			for j in xrange(2):
+		for i in range(7):
+			for j in range(2):
 				self.cursor_exists = False
 				yield True
 				self.cursor_exists = True
-				for k in xrange(7 - i):
+				for k in range(7 - i):
 					yield True
 		self.cursor_exists = False
 		while True:
@@ -1330,14 +1350,14 @@ class GameOverString:
 		self.state = GameOverString.STATE_APPEAR
 
 	def Process(self):
-		return self.gen.next()
+		return self.gen.__next__()
 
 	def Draw(self,screen_surface):
-		for i in xrange(9):
+		for i in range(9):
 			cos_val = math.cos(self.angle)
 			sin_val = math.sin(self.angle)
-			x = (((i - 4) * 32) * self.scale * cos_val) / 15 - 16 + 320
-			y = (((i - 4) * 32) * self.scale * sin_val) / 15 - 16 + 240
+			x = (((i - 4) * 32) * self.scale * cos_val) // 15 - 16 + 320
+			y = (((i - 4) * 32) * self.scale * sin_val) // 15 - 16 + 240
 			rect = (i * 32,0,32,32)
 			screen_surface.blit(Gss.data.gameoverstring_surface,(x,y),rect)
 
@@ -1349,7 +1369,7 @@ class GameOverString:
 		self.state = GameOverString.STATE_DISAPPEAR
 
 	def Appear(self):
-		for i in xrange(60):
+		for i in range(60):
 			self.angle = (i - 59) / 5.0
 			self.scale = 59 - i + 15
 			yield self
@@ -1358,7 +1378,7 @@ class GameOverString:
 			yield self
 
 	def Disappear(self):
-		for i in xrange(30):
+		for i in range(30):
 			self.scale = i * 5 + 15
 			yield self
 		self.state = GameOverString.STATE_DISAPPEARED
@@ -1372,11 +1392,11 @@ class TypewriterText:
 		self.num_draw = 0;
 		self.gen = self.Move()
 
- 	def Process(self):
-		return self.gen.next()
+	def Process(self):
+		return self.gen.__next__()
 
 	def Draw(self,screen_surface):
-		for i in xrange(self.num_draw + 1):
+		for i in range(self.num_draw + 1):
 			self.strings[i].Draw(screen_surface)
 
 	def Move(self):
@@ -1397,14 +1417,14 @@ class ActorList:
 				yield actor
 
 	def Append(self,actor):
-		for i in xrange(self.num_actor):
+		for i in range(self.num_actor):
 			if self.actors[i] == None:
 				self.actors[i] = actor
 				return True
 		return False
 
 	def Remove(self,actor):
-		for i in xrange(self.num_actor):
+		for i in range(self.num_actor):
 			if self.actors[i] is actor:
 				self.actors[i] = None
 				return True
@@ -1412,7 +1432,7 @@ class ActorList:
 
 	def GetExistingNum(self):
 		num_existing = 0
-		for i in xrange(self.num_actor):
+		for i in range(self.num_actor):
 			if self.actors[i] != None:
 				num_existing += 1
 		return num_existing
@@ -1425,12 +1445,12 @@ class Font:
 
 	def Draw(self,character,screen_surface,x,y):
 		code = ord(character)
-		screen_surface.blit(self.surface,(x,y),((code & 15) * 16,(code / 16) * 16,16,16))
+		screen_surface.blit(self.surface,(x,y),((code & 15) * 16,(code // 16) * 16,16,16))
 
 	def DrawString(self,string,screen_surface,x,y):
 		for character in string:
 			code = ord(character)
-			screen_surface.blit(self.surface,(x,y),((code & 15) * 16,(code / 16) * 16,16,16))
+			screen_surface.blit(self.surface,(x,y),((code & 15) * 16,(code // 16) * 16,16,16))
 			x += 16
 
 class Data:
@@ -1600,14 +1620,14 @@ class EventParser:
 		self.gen = self.ParseEvents()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 
 	def ParseEvents(self):
 		for event in self.events:
 			result = event[0](event[1])
 			if type(result) == int:
 				if result > 0:
-					for i in xrange(result):
+					for i in range(result):
 						yield None
 			else:
 				while result() == False:
@@ -1708,7 +1728,7 @@ class Gss:
 
 	def __init__(self):
 		pygame.init()
-		Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT),pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.FULLSCREEN)
+		Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT),pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
 		pygame.mouse.set_visible(0)
 		pygame.mixer.init()
 		pygame.joystick.init()
@@ -1788,7 +1808,7 @@ class Logo:
 		self.gen = self.Appear()
 
 	def Process(self):
-		self.gen.next()
+		self.gen.__next__()
 		self.Scale()
 		for part in self.parts:
 			part.Process(self.scale_param)
@@ -1802,7 +1822,7 @@ class Logo:
 		self.scale_param = [Fixed(scale)] + self.scale_param[:-1]
 
 	def Appear(self):
-		for i in xrange(128):
+		for i in range(128):
 			self.base_scale = i / 127.0
 			self.wave_scale = (1.0 - i / 127.0) * 2.0
 			self.phase += 2.0 * math.pi / 128.0
@@ -1811,7 +1831,7 @@ class Logo:
 			yield None
 
 	def Disappear(self):
-		for i in xrange(128):
+		for i in range(128):
 			self.base_scale = 1.0 + i / 32.0
 			self.wave_scale = i / 32.0
 			self.phase += 2.0 * math.pi / 96.0
@@ -1844,7 +1864,7 @@ class Title:
 			Gss.joystick.Update()
 			self.typewritertext.Process()
 			self.logo.Process()
-			if self.gen.next() == True:
+			if self.gen.__next__() == True:
 				state = Title.STATE_EXIT_START
 			self.logo.Draw(Gss.screen_surface)
 			self.typewritertext.Draw(Gss.screen_surface)
@@ -1852,14 +1872,14 @@ class Title:
 			lap_time_sec = (Gss.best_lap_time / 60) % 60
 			lap_time_under_sec = (Gss.best_lap_time % 60) * 100 / 60 + 1
 			Gss.data.font.DrawString("BEST LAP: %02d'%02d''%02d" % (lap_time_min,lap_time_sec,lap_time_under_sec),Gss.screen_surface,0,0)
-		       	pygame.display.flip()
+			pygame.display.flip()
 			ticks = pygame.time.get_ticks() - begin_ticks
 			if ticks < 16:
 				pygame.time.delay(16 - ticks)
 		return state
 
 	def Move(self):
-		for i in xrange(128):
+		for i in range(128):
 			yield False
 		done = False
 		while done == False:
@@ -1868,7 +1888,7 @@ class Title:
 				self.logo.ToDisappear()
 				done = True
 			yield False
-		for i in xrange(128):
+		for i in range(128):
 			yield False
 		while True:
 			yield True
@@ -2337,7 +2357,7 @@ class Shooting:
 				Shooting.scene.ending = Shooting.scene.ending.Process()
 			for i in range(Shooting.scene.status.IncrementEventCount()):
 				event_parser.Process()
-			if self.gen.next() == True:
+			if self.gen.__next__() == True:
 				state = Shooting.STATE_EXIT_GAMEOVER
 			Shooting.scene.CheckBeamEnemyCollision()
 			Shooting.scene.CheckBulletPlayerCollision()
