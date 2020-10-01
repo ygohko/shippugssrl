@@ -1356,8 +1356,8 @@ class GameOverString:
 		for i in range(9):
 			cos_val = math.cos(self.angle)
 			sin_val = math.sin(self.angle)
-			x = (((i - 4) * 32) * self.scale * cos_val) // 15 - 16 + 320
-			y = (((i - 4) * 32) * self.scale * sin_val) // 15 - 16 + 240
+			x = int((((i - 4) * 32) * self.scale * cos_val) / 15 - 16 + 320)
+			y = int((((i - 4) * 32) * self.scale * sin_val) / 15 - 16 + 240)
 			rect = (i * 32,0,32,32)
 			screen_surface.blit(Gss.data.gameoverstring_surface,(x,y),rect)
 
@@ -1529,8 +1529,8 @@ class Status:
 		self.player_stock -= num
 		if self.player_stock < 0:
 			self.player_stock = 0
-		if self.player_stock == 0 and self.completed == False:
-			self.lap_time += 60 * 60
+		if self.player_stock == 0:
+			self.SetCompleted()
 		return self.player_stock
 
 	def IncrementEventCount(self):
@@ -1720,6 +1720,30 @@ class Joystick:
 	def GetTrigger(self):
 		return self.trigger
 
+class EmulatedJoystick(Joystick):
+	def __init__(self):
+		super().__init__()
+		self.position = -1
+		self.movements = []
+		for i in range(4 * 60 * 60):
+			self.movements.append(random.randrange(16))
+
+	def Update(self):
+		self.position += 1
+		self.old = self.pressed
+		self.pressed = self.movements[self.position] | Joystick.A
+		if self.pressed & Joystick.UP and self.pressed & Joystick.DOWN:
+			self.pressed &= (Joystick.LEFT | Joystick.RIGHT | Joystick.A | Joystick.B)
+		if self.pressed & Joystick.LEFT and self.pressed & Joystick.RIGHT:
+			self.pressed &= (Joystick.UP | Joystick.DOWN | Joystick.A | Joystick.B)
+		self.trigger = (self.pressed ^ self.old) & self.pressed
+
+	def GetPressed(self):
+		return self.pressed
+
+	def GetTrigger(self):
+		return self.trigger
+
 class Gss:
 	screen_surface = None
 	joystick = None
@@ -1739,7 +1763,9 @@ class Gss:
 		while True:
 			if Title().MainLoop() == Title.STATE_EXIT_QUIT:
 				return
+			Gss.joystick = EmulatedJoystick()
 			Shooting().MainLoop()
+			Gss.joystick = Joystick()
 
 class LogoPart(Actor):
 	def __init__(self,x,y):
