@@ -1775,9 +1775,13 @@ class Contestant:
 	def Cross(self,contestant):
 		for i in range(len(self.movements)):
 			if contestant_rand.randrange(2) == 1:
-				value = self.movements[i]
-				self.movements[i] = contestant.movements[i]
-				contestant.movements[i] = value
+				if contestant_rand.randrange(10000) == 9999:
+					self.movements[i] = contestant_rand.randrange(16)
+					contestant.movements[i] = contestant_rand.randrange(16)
+				else:
+					value = self.movements[i]
+					self.movements[i] = contestant.movements[i]
+					contestant.movements[i] = value
 
 	def GetMovements(self):
 		return self.movements
@@ -1844,7 +1848,7 @@ class Gss:
 			shooting.MainLoop()
 			score = shooting.scene.status.contestant_score
 			self.contestants[self.contestant_index].SetScore(score)
-			print("Generation: {} Contestant: {} Score: {}".format(self.generation, self.contestant_index, score))
+			print("Generation: {}, Contestant: {}, Score: {}".format(self.generation, self.contestant_index, score))
 			Gss.joystick = Joystick()
 			self.contestant_index += 1
 			if self.contestant_index >= 10:
@@ -1992,10 +1996,15 @@ class Title:
 	def Move(self):
 		for i in range(128):
 			yield False
+		count = 0
 		done = False
 		while done == False:
 			trigger = Gss.joystick.GetTrigger()
 			if trigger & Joystick.A:
+				self.logo.ToDisappear()
+				done = True
+			count += 1
+			if count >= 60:
 				self.logo.ToDisappear()
 				done = True
 			yield False
@@ -2445,7 +2454,7 @@ class Shooting:
 			begin_ticks = pygame.time.get_ticks()
 			for event in pygame.event.get():
 				if event.type == pygame.KEYDOWN:
-					if event.key == pygame.K_ESCAPE:
+					if event.key == pygame.K_z:
 						state = Shooting.STATE_EXIT_QUIT
 			Gss.screen_surface.fill((0,0,0))
 			Gss.joystick.Update()
@@ -2508,9 +2517,13 @@ class Shooting:
 			yield False
 		while Shooting.scene.gameoverstring.GetState() == GameOverString.STATE_APPEAR:
 			yield False
+		count = 0
 		while Shooting.scene.gameoverstring.GetState() == GameOverString.STATE_APPEARED:
 			trigger = Gss.joystick.GetTrigger()
 			if trigger & Joystick.A:
+				Shooting.scene.gameoverstring.ToDisappear()
+			count += 1
+			if count >= 60:
 				Shooting.scene.gameoverstring.ToDisappear()
 			yield False
 		while Shooting.scene.gameoverstring.GetState() == GameOverString.STATE_DISAPPEAR:
