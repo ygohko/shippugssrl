@@ -32,6 +32,8 @@ from __future__ import generators
 import pygame
 import random
 import math
+import pickle
+import sys
 
 enemy_rand = random.Random()
 enemy_rand.seed(123)
@@ -1829,13 +1831,25 @@ class Contestant:
 		return new_contestants
 	GetAlternated = classmethod(GetAlternated)
 
+	def Load(cls,filename):
+		with open(filename,"rb") as file:
+			saved = pickle.load(file)
+		return saved["contestants"],saved["generation"]
+	Load = classmethod(Load)
+
+	def Save(cls,contestants,generation,filename):
+		saving = {"generation":generation,"contestants":contestants}
+		with open(filename,"wb") as file:
+			pickle.dump(saving,file)
+	Save = classmethod(Save)
+
 class Gss:
 	screen_surface = None
 	joystick = None
 	data = None
 	best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-	def __init__(self):
+	def __init__(self,contestants,generation):
 		pygame.init()
 		Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT),pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
 		pygame.mouse.set_visible(1)
@@ -1843,10 +1857,14 @@ class Gss:
 		pygame.joystick.init()
 		Gss.joystick = Joystick()
 		Gss.data = Data()
-		self.generation = 1
-		self.contestants = []
-		for i in range(10):
-			self.contestants.append(Contestant())
+		if contestants == None:
+			self.generation = 1
+			self.contestants = []
+			for i in range(10):
+				self.contestants.append(Contestant())
+		else:
+			self.generation = generation
+			self.contestants = contestants
 		self.contestant_index = 0
 
 	def Main(self):
@@ -1865,8 +1883,9 @@ class Gss:
 			self.contestant_index += 1
 			if self.contestant_index >= 10:
 				self.contestants = Contestant.GetAlternated(self.contestants)
-				self.contestant_index = 0
 				self.generation += 1
+				Contestant.Save(self.contestants,self.generation,"gen{}.pickle".format(self.generation))
+				self.contestant_index = 0
 
 class LogoPart(Actor):
 	def __init__(self,x,y):
@@ -1976,7 +1995,7 @@ class Title:
 
 	def __init__(self):
 		self.logo = Logo()
-		self.typewritertext = TypewriterText((TypewriterString(216,256,"VERSION %s" % VERSION),TypewriterString(160,384,"(C)2005 - 2008 GONY."),TypewriterString(136,416,"DEDICATED TO KENYA ABE."),TypewriterString(272,48,"SHIPPU"),TypewriterString(224,320,"PRESS BUTTON")))
+		self.typewritertext = TypewriterText((TypewriterString(216,256,"VERSION %s" % VERSION),TypewriterString(160,384,"(C)2005 - 2020 GONY."),TypewriterString(136,416,"DEDICATED TO KENYA ABE."),TypewriterString(272,48,"SHIPPU"),TypewriterString(224,320,"PRESS BUTTON")))
 		self.gen = self.Move()
 
 	def MainLoop(self):
@@ -2544,4 +2563,8 @@ class Shooting:
 			yield True
 
 if __name__ == "__main__":
-	Gss().Main()
+	contestants = None
+	generation = 0
+	if len(sys.argv) == 2:
+		contestants,generation = Contestant.Load(sys.argv[1])
+	Gss(contestants,generation).Main()
