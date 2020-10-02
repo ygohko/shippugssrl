@@ -1738,15 +1738,27 @@ class Joystick:
 		return self.trigger
 
 class EmulatedJoystick(Joystick):
-	def __init__(self, movements):
+	def __init__(self, shooting, targets):
 		super().__init__()
 		self.position = -1
-		self.movements = movements
+		self.shooting = shooting
+		self.targets = targets
 
 	def Update(self):
 		self.position += 1
 		self.old = self.pressed
-		self.pressed = self.movements[self.position] | Joystick.A
+		target = self.targets[self.position]
+		player_position = (self.shooting.scene.player.x, self.shooting.scene.player.y)
+		self.pressed = 0
+		if target[0] < player_position[0]:
+			self.pressed |= Joystick.LEFT
+		elif target[0] > player_position[0]:
+			self.pressed |= Joystick.RIGHT
+		if target[1] < player_position[1]:
+			self.pressed |= Joystick.UP
+		elif target[1] > player_position[1]:
+			self.pressed |= Joystick.DOWN
+		self.pressed |= Joystick.A
 		if self.pressed & Joystick.UP and self.pressed & Joystick.DOWN:
 			self.pressed &= (Joystick.LEFT | Joystick.RIGHT | Joystick.A | Joystick.B)
 		if self.pressed & Joystick.LEFT and self.pressed & Joystick.RIGHT:
@@ -1761,30 +1773,30 @@ class EmulatedJoystick(Joystick):
 
 class Contestant:
 	def __init__(self):
-		self.movements = []
+		self.targets = []
 		for i in range(4 * 60 * 60):
-			self.movements.append(contestant_rand.randrange(16))
+			self.targets.append((contestant_rand.randrange(FIXED_WIDTH // 3), contestant_rand.randrange(FIXED_HEIGHT)))
 		self.score = 0
 
 	def Clone(self):
 		contestant = Contestant()
-		contestant.movements = self.movements[:]
+		contestant.targets = self.targets[:]
 		contestant.score = self.score
 		return contestant
 
 	def Cross(self,contestant):
-		for i in range(len(self.movements)):
+		for i in range(len(self.targets)):
 			if contestant_rand.randrange(2) == 1:
-				if contestant_rand.randrange(10000) == 9999:
-					self.movements[i] = contestant_rand.randrange(16)
-					contestant.movements[i] = contestant_rand.randrange(16)
+				if contestant_rand.randrange(100) == 99:
+					self.targets[i] = (contestant_rand.randrange(FIXED_WIDTH), contestant_rand.randrange(FIXED_HEIGHT))
+					contestant.targets[i] = (contestant_rand.randrange(FIXED_WIDTH), contestant_rand.randrange(FIXED_HEIGHT))
 				else:
-					value = self.movements[i]
-					self.movements[i] = contestant.movements[i]
-					contestant.movements[i] = value
+					value = self.targets[i]
+					self.targets[i] = contestant.targets[i]
+					contestant.targets[i] = value
 
-	def GetMovements(self):
-		return self.movements
+	def GetTargets(self):
+		return self.targets
 
 	def GetScore(self):
 		return self.score
@@ -1826,7 +1838,7 @@ class Gss:
 	def __init__(self):
 		pygame.init()
 		Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT),pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
-		pygame.mouse.set_visible(0)
+		pygame.mouse.set_visible(1)
 		pygame.mixer.init()
 		pygame.joystick.init()
 		Gss.joystick = Joystick()
@@ -1841,10 +1853,10 @@ class Gss:
 		while True:
 			if Title().MainLoop() == Title.STATE_EXIT_QUIT:
 				return
-			Gss.joystick = EmulatedJoystick(self.contestants[self.contestant_index].GetMovements())
 			enemy_rand.seed(123)
 			effect_rand.seed(456)
 			shooting = Shooting()
+			Gss.joystick = EmulatedJoystick(shooting, self.contestants[self.contestant_index].GetTargets())
 			shooting.MainLoop()
 			score = shooting.scene.status.contestant_score
 			self.contestants[self.contestant_index].SetScore(score)
@@ -2454,7 +2466,7 @@ class Shooting:
 			begin_ticks = pygame.time.get_ticks()
 			for event in pygame.event.get():
 				if event.type == pygame.KEYDOWN:
-					if event.key == pygame.K_z:
+					if event.key == pygame.K_ESCAPE:
 						state = Shooting.STATE_EXIT_QUIT
 			Gss.screen_surface.fill((0,0,0))
 			Gss.joystick.Update()
