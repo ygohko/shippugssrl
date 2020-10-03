@@ -1,32 +1,15 @@
-= SHIPPU GSS =
-SHIPPU GSS‚Íƒ^ƒCƒ€ƒAƒ^ƒbƒNƒVƒ…[ƒeƒBƒ“ƒO‚Å‚·BˆÈ‰º‚Ì‚æ‚¤‚È“Á’¥‚ª‚ ‚è‚Ü‚·:
- * “GƒLƒƒƒ‰ƒNƒ^‚Ìs“®ƒpƒ^[ƒ“‚Í‚»‚ê‚È‚è‚É–L•x‚Å‚·‚ªAŒ©‚½–Ú‚Í‘S•”“¯‚¶‚È‚Ì‚Å‘å•Ï‚Å‚·
- * ƒtƒ‹Python‚ÅƒWƒFƒlƒŒ[ƒ^‚ð—”—p‚µ‚ÄˆÀŠy‚É‹Lq‚³‚ê‚Ä‚¨‚èA‹Md‚ÈCPUŽ‘Œ¹‚ð–³‘ÊŒ­‚¢‚µ‚Ü‚·
+= SHIPPU GSS GA =
+SHIPPU GSSã¯ã‚¿ã‚¤ãƒ ã‚¢ã‚¿ãƒƒã‚¯ã‚·ãƒ¥ãƒ¼ãƒ†ã‚£ãƒ³ã‚°ã‚’ãƒ™ãƒ¼ã‚¹ã«ã—ãŸéºä¼çš„ã‚¢ãƒ«ã‚´ãƒªã‚ºãƒ ã«
+ã‚ˆã‚‹è‡ªå‹•ãƒ—ãƒ¬ã‚¤ã®å®Ÿé¨“ã§ã™ã€‚
 
-= ŽÀs•û–@ =
-Windows‚Ìê‡‚Ígss.exe‚ðŽÀs‚µ‚Ü‚·B
-‚»‚Ì‘¼‚ÌOS‚Ìê‡‚ÍPythonAPygame‚ðƒCƒ“ƒXƒg[ƒ‹ŒãAgss.py‚ðŽÀs‚µ‚Ü‚·B
+= å®Ÿè¡Œæ–¹æ³• =
+Pythonã€Pygameã‚’ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«å¾Œã€gss.pyã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 
-= ƒ‹[ƒ‹ =
-Ž©‹@‚ð‘€ì‚µA“G‚ð”j‰ó‚µ‚Ü‚·BÅŒã‚ÉoŒ»‚·‚éƒ{ƒX‚ð”j‰ó‚·‚é‚ÆƒQ[ƒ€ƒNƒŠƒA‚Æ‚È‚èA
-‚»‚Ì‘‚³‚ð‹£‚¢‚Ü‚·B
+= æ“ä½œæ–¹æ³• =
+ * Escã‚­ãƒ¼ ... ã‚²ãƒ¼ãƒ çµ‚äº† / ã‚¿ã‚¤ãƒˆãƒ«ç”»é¢ã«æˆ»ã‚‹
 
-Ž©‹@‚ª”j‰ó‚³‚ê‚é‚ÆŽc‹@‚ª1‚ÂŒ¸‚è‚Ü‚·BŽc‹@‚ª0‚Ìó‘Ô‚Å”j‰ó‚³‚ê‚é‚Æƒyƒiƒ‹ƒeƒB‚Æ‚µ‚Ä
-ƒ‰ƒbƒvƒ^ƒCƒ€‚É1•ª‰ÁŽZ‚³‚ê‚Ü‚·B
+= ãƒ©ã‚¤ã‚»ãƒ³ã‚¹ =
+MITã§é…å¸ƒã—ã¾ã™ã€‚
 
-‰Eã‚ÉƒXƒs[ƒh•\Ž¦‚ª‚ ‚èAŽ©‹@‚ª‰æ–Ê‰E‘¤‚É‚¢‚éŽž‚É‰Á‘¬‚µA‰æ–Ê¶‘¤‚É‚¢‚éŽž‚É
-Œ¸‘¬‚µ‚Ü‚·BƒXƒs[ƒh‚ª‘¬‚­‚È‚é‚Æ“ïˆÕ“x‚ªã¸‚µ‚Ü‚·‚ª‚»‚Ì•ªƒ‰ƒbƒvƒ^ƒCƒ€‚ð’Zk‚Å‚«‚Ü‚·B
-ƒXƒs[ƒh‚ª’x‚­‚È‚é‚Æ“ïˆÕ“x‚Í‰º~‚µ‚Ü‚·‚ª‚æ‚¢ƒ‰ƒbƒvƒ^ƒCƒ€‚ð“¾‚é‚±‚Æ‚ª‚Å‚«‚Ü‚¹‚ñB
-
-= ‘€ì•û–@ =
-ƒL[ƒ{[ƒh‚Ü‚½‚ÍƒWƒ‡ƒCƒXƒeƒBƒbƒN‚ðŽg—p‚µ‚Ü‚·B
- * ƒJ[ƒ\ƒ‹ƒL[ / ƒWƒ‡ƒCƒXƒeƒBƒbƒN•ûŒüƒ{ƒ^ƒ“ ... Ž©‹@‚ÌˆÚ“®
- * ZƒL[ / ƒWƒ‡ƒCƒXƒeƒBƒbƒNƒ{ƒ^ƒ“1 ... ƒVƒ‡ƒbƒg(•bŠÔ15˜AŽË)
- * XƒL[ / ƒWƒ‡ƒCƒXƒeƒBƒbƒNƒ{ƒ^ƒ“2 ... ƒVƒ‡ƒbƒg(•bŠÔ30˜AŽË)
- * EscƒL[ ... ƒQ[ƒ€I—¹ / ƒ^ƒCƒgƒ‹‰æ–Ê‚É–ß‚é
-
-= ƒ‰ƒCƒZƒ“ƒX =
-MIT‚Å”z•z‚µ‚Ü‚·B
-
-= —ðŽj =
- * ƒo[ƒWƒ‡ƒ“1.0.0 ... Å‰‚ÌƒŠƒŠ[ƒX
+= æ­´å² =
+ * ãƒãƒ¼ã‚¸ãƒ§ãƒ³0.0.0 ... (ã¾ã )
