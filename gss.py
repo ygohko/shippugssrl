@@ -42,7 +42,7 @@ effect_rand.seed(456)
 contestant_rand = random.Random()
 contestant_rand.seed(789)
 
-VERSION = "1.0.0"
+VERSION = "0.0.0"
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
 FIXED_MUL = 16384
@@ -1533,10 +1533,10 @@ class Status:
 		self.multiplier = 1
 
 	def AddScore(self,base_score):
-		self.score += base_score * self.multiplier
+		self.score += base_score
 
 	def AddSuicideScore(self):
-		score = self.multiplier * self.player_stock
+		score = self.player_stock
 		self.score += score
 		return score
 
@@ -1572,7 +1572,7 @@ class Status:
 
 	def SetCompleted(self):
 		self.completed = True
-		self.contestant_score = ScreenInt(self.event_count)
+		self.contestant_score = self.event_count / 16384.0 + self.score / 2.0
 
 	def GetCompleted(self):
 		return self.completed
@@ -1581,7 +1581,7 @@ class Status:
 		lap_time_min = self.lap_time / (60 * 60)
 		lap_time_sec = (self.lap_time / 60) % 60
 		lap_time_under_sec = (self.lap_time % 60) * 100 / 60 + 1
-		Gss.data.font.DrawString("LAP TIME: %02d'%02d''%02d  SPEED:         %03d%%" % (lap_time_min,lap_time_sec,lap_time_under_sec,ScreenInt(self.event_speed * 100)),screen_surface,0,0)
+		Gss.data.font.DrawString("SCORE:   %010d  SPEED:         %03d%%" % (self.score,ScreenInt(self.event_speed * 100)),screen_surface,0,0)
 		display_player_stock = self.player_stock - 1
 		if display_player_stock < 0:
 			display_player_stock = 0
