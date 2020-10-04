@@ -26,6 +26,8 @@ import math
 import pickle
 import sys
 
+import numpy as np
+
 enemy_rand = random.Random()
 enemy_rand.seed(123)
 effect_rand = random.Random()
@@ -996,7 +998,7 @@ class BossBatteryEnemy(BossPartEnemy):
                 yield None
             Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player),5))
             yield None
- 
+
     def Idle(self):
         while True:
             yield None
@@ -1562,7 +1564,12 @@ class Status:
 
     def SetCompleted(self):
         self.completed = True
-        self.contestant_score = self.event_count / 16384.0 + self.score / 2.0
+        self.contestant_score = self.event_count / 16384.0 * 0.0 + self.score / 2.0
+        print(Shooting.scene.player.x, Shooting.scene.player.y)
+        if Shooting.scene.player.x <= Fixed(8):
+            self.contestant_score /= 10.0
+        if Shooting.scene.player.x >= Fixed(632):
+            self.contestant_score /= 10.0
 
     def GetCompleted(self):
         return self.completed
@@ -1729,27 +1736,138 @@ class Joystick:
     def GetTrigger(self):
         return self.trigger
 
+class NeuralNetwork:
+    NEURON_COUNT = 20 * 18 + 18 * 18 + 18 * 18 + 18 *4
+
+    def __init__(self):
+        self.m1 = np.zeros((20,18))
+        self.m2 = np.zeros((18,18))
+        self.m3 = np.zeros((18,18))
+        self.m4 = np.zeros((18,4))
+
+    def Randomize(self):
+        shape = self.m1.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m1[i,j] = contestant_rand.random()
+        shape = self.m2.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m2[i,j] = contestant_rand.random()
+        shape = self.m3.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m3[i,j] = contestant_rand.random()
+        shape = self.m4.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m4[i,j] = contestant_rand.random()
+
+    def Load(self,genes):
+        index = 0
+        shape = self.m1.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m1[i,j] = genes[index]
+                index += 1
+        shape = self.m2.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m2[i,j] = genes[index]
+                index += 1
+        shape = self.m3.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m3[i,j] = genes[index]
+                index += 1
+        shape = self.m4.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.m4[i,j] = genes[index]
+                index += 1
+
+    def Infer(self,values):
+        input = np.array(values)
+        a_value = np.dot(input,self.m1)
+        b_value = np.dot(a_value,self.m2)
+        c_value = np.dot(b_value,self.m3)
+        output = np.dot(c_value,self.m4)
+        return output.tolist()
+
 class EmulatedJoystick(Joystick):
-    def __init__(self, shooting, targets):
+    THRESHOLD = 100.0
+
+    def __init__(self,shooting,genes):
         super().__init__()
         self.position = -1
         self.shooting = shooting
-        self.targets = targets
+        self.neural_network = NeuralNetwork()
+        self.neural_network.Load(genes)
 
     def Update(self):
         self.position += 1
         self.old = self.pressed
-        target = self.targets[self.position]
-        player_position = (self.shooting.scene.player.x, self.shooting.scene.player.y)
+        player = self.shooting.scene.player
+        bullets = self.shooting.scene.bullets
+        enemies = self.shooting.scene.enemies
+        values = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
+        for bullet in bullets:
+            delta = ((bullet.x - player.x) / 16384.0, (bullet.y - player.y) / 16384.0)
+            distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
+            angle = math.atan2(delta[1],  delta[0]) / (2 * math.pi) * 360.0 + 22.5
+            index = int(angle / 45.0) % 8
+            value = 0.0
+            if distance < 100.0:
+                value = (100.0 - distance) / 100.0
+            if values[index] < value:
+                values[index] = value
+        for enemy in enemies:
+            delta = ((enemy.x - player.x) / 16384.0, (enemy.y - player.y) / 16384.0)
+            distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
+            angle = math.atan2(delta[1],  delta[0]) / (2 * math.pi) * 360.0 + 22.5
+            index = int(angle / 45.0) % 8
+            value = 0.0
+            if distance < 100.0:
+                value = (100.0 - distance) / 100.0
+            if values[index + 8] < value:
+                values[index + 8] = value
+        x = player.x / 16384.0
+        y = player.y / 16384.0
+        value = 0.0
+        if x < 100.0:
+            value = (100.0 - x) / 100.0
+        values[16] = value
+        value = 0.0
+        if x > (SCREEN_WIDTH - 100.0):
+            value = (x - (SCREEN_WIDTH - 100.0)) / 100.0
+        values[17] = value
+        value = 0.0
+        if y < 100.0:
+            value = (100.0 - y) / 100.0
+        values[18] = value
+        value = 0.0
+        if y > (SCREEN_HEIGHT - 100.0):
+            value = (y - (SCREEN_HEIGHT - 100.0)) / 100.0
+        values[19] = value
+        inferred = self.neural_network.Infer(values)
+        # print(values,inferred)
         self.pressed = 0
-        if target[0] < player_position[0]:
-            self.pressed |= Joystick.LEFT
-        elif target[0] > player_position[0]:
-            self.pressed |= Joystick.RIGHT
-        if target[1] < player_position[1]:
+        if inferred[0] > inferred[2]:
+            inferred[2] = 0.0
+        if inferred[0] < inferred[2]:
+            inferred[0] = 0.0
+        if inferred[1] > inferred[3]:
+            inferred[3] = 0.0
+        if inferred[1] < inferred[3]:
+            inferred[1] = 0.0
+        if inferred[0] > EmulatedJoystick.THRESHOLD:
             self.pressed |= Joystick.UP
-        elif target[1] > player_position[1]:
+        if inferred[1] > EmulatedJoystick.THRESHOLD:
+            self.pressed |= Joystick.RIGHT
+        if inferred[2] > EmulatedJoystick.THRESHOLD:
             self.pressed |= Joystick.DOWN
+        if inferred[3] > EmulatedJoystick.THRESHOLD:
+            self.pressed |= Joystick.LEFT
         self.pressed |= Joystick.A
         if self.pressed & Joystick.UP and self.pressed & Joystick.DOWN:
             self.pressed &= (Joystick.LEFT | Joystick.RIGHT | Joystick.A | Joystick.B)
@@ -1765,30 +1883,30 @@ class EmulatedJoystick(Joystick):
 
 class Contestant:
     def __init__(self):
-        self.targets = []
-        for i in range(4 * 60 * 60):
-            self.targets.append((contestant_rand.randrange(FIXED_WIDTH // 3), contestant_rand.randrange(FIXED_HEIGHT)))
+        self.genes = []
+        for i in range(NeuralNetwork.NEURON_COUNT):
+            self.genes.append(contestant_rand.random())
         self.score = 0
 
     def Clone(self):
         contestant = Contestant()
-        contestant.targets = self.targets[:]
+        contestant.genes = self.genes[:]
         contestant.score = self.score
         return contestant
 
     def Cross(self,contestant):
-        for i in range(len(self.targets)):
+        for i in range(len(self.genes)):
             if contestant_rand.randrange(2) == 1:
                 if contestant_rand.randrange(100) == 99:
-                    self.targets[i] = (contestant_rand.randrange(FIXED_WIDTH), contestant_rand.randrange(FIXED_HEIGHT))
-                    contestant.targets[i] = (contestant_rand.randrange(FIXED_WIDTH), contestant_rand.randrange(FIXED_HEIGHT))
+                    self.genes[i] = contestant_rand.random()
+                    contestant.genes[i] = contestant_rand.random()
                 else:
-                    value = self.targets[i]
-                    self.targets[i] = contestant.targets[i]
-                    contestant.targets[i] = value
+                    value = self.genes[i]
+                    self.genes[i] = contestant.genes[i]
+                    contestant.genes[i] = value
 
-    def GetTargets(self):
-        return self.targets
+    def GetGenes(self):
+        return self.genes
 
     def GetScore(self):
         return self.score
@@ -1864,7 +1982,7 @@ class Gss:
             enemy_rand.seed(123)
             effect_rand.seed(456)
             shooting = Shooting()
-            Gss.joystick = EmulatedJoystick(shooting, self.contestants[self.contestant_index].GetTargets())
+            Gss.joystick = EmulatedJoystick(shooting,self.contestants[self.contestant_index].GetGenes())
             shooting.MainLoop()
             score = shooting.scene.status.contestant_score
             self.contestants[self.contestant_index].SetScore(score)
