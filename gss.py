@@ -220,7 +220,13 @@ class Player(Actor):
                 self.y -= Fixed(5)
             if pressed & Joystick.DOWN:
                 self.y += Fixed(5)
+            old_x = self.x
+            old_y = self.y
             self.x,self.y = self.collision.RoundToSceneLimit(self.x,self.y)
+            if self.x != old_x and self.y != old_y:
+                Shooting.scene.status.UpdatePenalty(0.1)
+            if self.x != old_x and self.x > Fixed(320):
+                Shooting.scene.status.UpdatePenalty(0.1)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1512,7 +1518,8 @@ class Status:
         self.event_speed = Fixed(1)
         self.lap_time = 0
         self.completed = False
-        self.contestant_score = 0;
+        self.contestant_score = 0
+        self.penalty = 1.0
 
     def IncrementFrameNum(self):
         self.frame_num += 1
@@ -1564,15 +1571,14 @@ class Status:
 
     def SetCompleted(self):
         self.completed = True
-        self.contestant_score = self.event_count / 16384.0 * 0.0 + self.score / 2.0
-        print(Shooting.scene.player.x, Shooting.scene.player.y)
-        if Shooting.scene.player.x <= Fixed(8):
-            self.contestant_score /= 10.0
-        if Shooting.scene.player.x >= Fixed(632):
-            self.contestant_score /= 10.0
+        self.contestant_score = (self.event_count / 16384.0 + self.score / 2.0 + contestant_rand.random() / 1000.0) * self.penalty
 
     def GetCompleted(self):
         return self.completed
+
+    def UpdatePenalty(self,penalty):
+        if self.penalty > penalty:
+            self.penalty = penalty
 
     def Draw(self,screen_surface):
         lap_time_min = self.lap_time / (60 * 60)
@@ -1737,7 +1743,7 @@ class Joystick:
         return self.trigger
 
 class NeuralNetwork:
-    NEURON_COUNT = 20 * 18 + 18 * 18 + 18 * 18 + 18 *4
+    NEURON_COUNT = 20 * 18 + 18 * 18 + 18 * 18 + 18 * 4
 
     def __init__(self):
         self.m1 = np.zeros((20,18))
@@ -1788,14 +1794,32 @@ class NeuralNetwork:
 
     def Infer(self,values):
         input = np.array(values)
+        # print("input: {}".format(input))
         a_value = np.dot(input,self.m1)
+        for i in range(len(a_value)):
+            if a_value[i] < 0.0:
+                a_value[i] = 0.0
+        # a_value = a_value / 20.0
+        # print("a_value: {}".format(a_value))
         b_value = np.dot(a_value,self.m2)
+        for i in range(len(b_value)):
+            if b_value[i] < 0.0:
+                b_value[i] = 0.0
+        # b_value = b_value / 18.0
+        # print("b_value: {}".format(b_value))
         c_value = np.dot(b_value,self.m3)
+        for i in range(len(c_value)):
+            if c_value[i] < 0.0:
+                c_value[i] = 0.0
+        # c_value = c_value / 18.0
+        # print("c_value: {}".format(c_value))
         output = np.dot(c_value,self.m4)
+        # output = output / 18.0
+        # print("output: {}".format(output))
         return output.tolist()
 
 class EmulatedJoystick(Joystick):
-    THRESHOLD = 100.0
+    THRESHOLD = 0.5
 
     def __init__(self,shooting,genes):
         super().__init__()
@@ -1814,7 +1838,7 @@ class EmulatedJoystick(Joystick):
         for bullet in bullets:
             delta = ((bullet.x - player.x) / 16384.0, (bullet.y - player.y) / 16384.0)
             distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
-            angle = math.atan2(delta[1],  delta[0]) / (2 * math.pi) * 360.0 + 22.5
+            angle = math.atan2(delta[1],  delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
             index = int(angle / 45.0) % 8
             value = 0.0
             if distance < 100.0:
@@ -1824,13 +1848,27 @@ class EmulatedJoystick(Joystick):
         for enemy in enemies:
             delta = ((enemy.x - player.x) / 16384.0, (enemy.y - player.y) / 16384.0)
             distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
-            angle = math.atan2(delta[1],  delta[0]) / (2 * math.pi) * 360.0 + 22.5
+            angle = math.atan2(delta[1],  delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
             index = int(angle / 45.0) % 8
             value = 0.0
             if distance < 100.0:
                 value = (100.0 - distance) / 100.0
-            if values[index + 8] < value:
-                values[index + 8] = value
+            if values[index] < value:
+                values[index] = value
+            if angle < 0.0:
+                index = int(angle / -15.0)
+                value = distance / 100.0
+                if value > 1.0:
+                    value = 1.0
+                if index < 4 and values[index + 8] < value:
+                    values[index + 8] = value
+            else:
+                index = int(angle / 15.0)
+                value = distance / 100.0
+                if value > 1.0:
+                    value = 1.0
+                if index < 4 and values[index + 12] < value:
+                    values[index + 12] = value
         x = player.x / 16384.0
         y = player.y / 16384.0
         value = 0.0
@@ -1838,8 +1876,10 @@ class EmulatedJoystick(Joystick):
             value = (100.0 - x) / 100.0
         values[16] = value
         value = 0.0
-        if x > (SCREEN_WIDTH - 100.0):
-            value = (x - (SCREEN_WIDTH - 100.0)) / 100.0
+        if x > ((SCREEN_WIDTH / 2) - 100.0):
+            value = (x - ((SCREEN_WIDTH / 2) - 100.0)) / 100.0
+            if value > 1.0:
+                value = 1.0
         values[17] = value
         value = 0.0
         if y < 100.0:
@@ -1885,7 +1925,7 @@ class Contestant:
     def __init__(self):
         self.genes = []
         for i in range(NeuralNetwork.NEURON_COUNT):
-            self.genes.append(contestant_rand.random())
+            self.genes.append(contestant_rand.random() * 2.0 - 1.0)
         self.score = 0
 
     def Clone(self):
@@ -1896,14 +1936,13 @@ class Contestant:
 
     def Cross(self,contestant):
         for i in range(len(self.genes)):
+            if contestant_rand.random() <= 1.0 * 0.01:
+                self.genes[i] = contestant_rand.random() * 2.0 - 1.0
+                contestant.genes[i] = contestant_rand.random() * 2.0 - 1.0
             if contestant_rand.randrange(2) == 1:
-                if contestant_rand.randrange(100) == 99:
-                    self.genes[i] = contestant_rand.random()
-                    contestant.genes[i] = contestant_rand.random()
-                else:
-                    value = self.genes[i]
-                    self.genes[i] = contestant.genes[i]
-                    contestant.genes[i] = value
+                value = self.genes[i]
+                self.genes[i] = contestant.genes[i]
+                contestant.genes[i] = value
 
     def GetGenes(self):
         return self.genes
