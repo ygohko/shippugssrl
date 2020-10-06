@@ -1751,24 +1751,6 @@ class NeuralNetwork:
         self.m3 = np.zeros((18,18))
         self.m4 = np.zeros((18,4))
 
-    def Randomize(self):
-        shape = self.m1.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.m1[i,j] = contestant_rand.random()
-        shape = self.m2.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.m2[i,j] = contestant_rand.random()
-        shape = self.m3.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.m3[i,j] = contestant_rand.random()
-        shape = self.m4.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.m4[i,j] = contestant_rand.random()
-
     def Load(self,genes):
         index = 0
         shape = self.m1.shape
@@ -1796,25 +1778,15 @@ class NeuralNetwork:
         input = np.array(values)
         # print("input: {}".format(input))
         a_value = np.dot(input,self.m1)
-        for i in range(len(a_value)):
-            if a_value[i] < 0.0:
-                a_value[i] = 0.0
-        # a_value = a_value / 20.0
+        a_value = np.maximum(a_value,0.0)
         # print("a_value: {}".format(a_value))
         b_value = np.dot(a_value,self.m2)
-        for i in range(len(b_value)):
-            if b_value[i] < 0.0:
-                b_value[i] = 0.0
-        # b_value = b_value / 18.0
+        b_value = np.maximum(b_value,0.0)
         # print("b_value: {}".format(b_value))
         c_value = np.dot(b_value,self.m3)
-        for i in range(len(c_value)):
-            if c_value[i] < 0.0:
-                c_value[i] = 0.0
-        # c_value = c_value / 18.0
+        c_value = np.maximum(c_value,0.0)
         # print("c_value: {}".format(c_value))
         output = np.dot(c_value,self.m4)
-        # output = output / 18.0
         # print("output: {}".format(output))
         return output.tolist()
 
@@ -2142,7 +2114,7 @@ class Title:
 
     def __init__(self):
         self.logo = Logo()
-        self.typewritertext = TypewriterText((TypewriterString(216,256,"VERSION %s" % VERSION),TypewriterString(160,384,"(C)2005 - 2020 GONY."),TypewriterString(136,416,"DEDICATED TO KENYA ABE."),TypewriterString(272,48,"SHIPPU"),TypewriterString(224,320,"PRESS BUTTON")))
+        self.typewritertext = TypewriterText((TypewriterString(216,256,"VERSION %s" % VERSION),TypewriterString(160,384,"(C)2005 - 2020 GONY."),TypewriterString(136,416,"DEDICATED TO KENYA ABE."),TypewriterString(272,48,"SHIPPU"),TypewriterString(464,240,"NN"),TypewriterString(224,320,"PRESS BUTTON")))
         self.gen = self.Move()
 
     def MainLoop(self):
