@@ -1743,52 +1743,76 @@ class Joystick:
         return self.trigger
 
 class NeuralNetwork:
-    NEURON_COUNT = 20 * 18 + 18 * 18 + 18 * 18 + 18 * 4
+    GENE_COUNT = 18 * 20 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 4 * 18 + 4
 
     def __init__(self):
-        self.m1 = np.zeros((20,18))
-        self.m2 = np.zeros((18,18))
-        self.m3 = np.zeros((18,18))
-        self.m4 = np.zeros((18,4))
+        self.w1 = np.zeros((18,20))
+        self.b1 = np.zeros((18,1))
+        self.w2 = np.zeros((18,18))
+        self.b2 = np.zeros((18,1))
+        self.w3 = np.zeros((18,18))
+        self.b3 = np.zeros((18,1))
+        self.w4 = np.zeros((4,18))
+        self.b4 = np.zeros((4,1))
 
     def Load(self,genes):
         index = 0
-        shape = self.m1.shape
+        shape = self.w1.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.m1[i,j] = genes[index]
+                self.w1[i,j] = genes[index]
                 index += 1
-        shape = self.m2.shape
+        shape = self.b1.shape
+        for i in range(shape[0]):
+            self.b1[i,0] = genes[index]
+            index += 1
+        shape = self.w2.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.m2[i,j] = genes[index]
+                self.w2[i,j] = genes[index]
                 index += 1
-        shape = self.m3.shape
+        shape = self.b2.shape
+        for i in range(shape[0]):
+            self.b2[i,0] = genes[index]
+            index += 1
+        shape = self.w3.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.m3[i,j] = genes[index]
+                self.w3[i,j] = genes[index]
                 index += 1
-        shape = self.m4.shape
+        shape = self.b3.shape
+        for i in range(shape[0]):
+            self.b3[i,0] = genes[index]
+            index += 1
+        shape = self.w4.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.m4[i,j] = genes[index]
+                self.w4[i,j] = genes[index]
                 index += 1
+        shape = self.b4.shape
+        for i in range(shape[0]):
+            self.b4[i,0] = genes[index]
+            index += 1
 
     def Infer(self,values):
-        input = np.array(values)
+        input = np.array(values).reshape((20,1))
         # print("input: {}".format(input))
-        a_value = np.dot(input,self.m1)
+        a_value = np.dot(self.w1,input)
+        a_value = np.add(a_value,self.b1)
         a_value = np.maximum(a_value,0.0)
         # print("a_value: {}".format(a_value))
-        b_value = np.dot(a_value,self.m2)
+        b_value = np.dot(self.w2,a_value)
+        b_value = np.add(b_value,self.b2)
         b_value = np.maximum(b_value,0.0)
         # print("b_value: {}".format(b_value))
-        c_value = np.dot(b_value,self.m3)
+        c_value = np.dot(self.w3,b_value)
+        c_value = np.add(c_value,self.b3)
         c_value = np.maximum(c_value,0.0)
         # print("c_value: {}".format(c_value))
-        output = np.dot(c_value,self.m4)
+        output = np.dot(self.w4,c_value)
+        output = np.add(output,self.b4)
         # print("output: {}".format(output))
-        return output.tolist()
+        return output.reshape((4,)).tolist()
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
@@ -1896,7 +1920,7 @@ class EmulatedJoystick(Joystick):
 class Contestant:
     def __init__(self):
         self.genes = []
-        for i in range(NeuralNetwork.NEURON_COUNT):
+        for i in range(NeuralNetwork.GENE_COUNT):
             self.genes.append(contestant_rand.random() * 2.0 - 1.0)
         self.score = 0
 
@@ -1908,7 +1932,7 @@ class Contestant:
 
     def Cross(self,contestant):
         for i in range(len(self.genes)):
-            if contestant_rand.random() <= 1.0 * 0.01:
+            if contestant_rand.random() <= 0.5 * 0.01:
                 self.genes[i] = contestant_rand.random() * 2.0 - 1.0
                 contestant.genes[i] = contestant_rand.random() * 2.0 - 1.0
             if contestant_rand.randrange(2) == 1:
