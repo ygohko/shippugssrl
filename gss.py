@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2005 - 2020 Yasuaki Gohko
-# 
+# Copyright (c) 2005 - 2021 Yasuaki Gohko
+#
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation
 # the rights to use, copy, modify, merge, publish, distribute, sublicense,
 # and/or sell copies of the Software, and to permit persons to whom the
 # Software is furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -74,6 +74,23 @@ def RandomEffectVector(length):
     x = int(float(x) * length / current_length)
     y = int(float(y) * length / current_length)
     return (x,y)
+
+class Settings:
+    def __init__(self):
+        self.no_wait = False
+        self.silent = False
+
+    def GetNoWait(self):
+        return self.no_wait
+
+    def SetNoWait(self,no_wait):
+        self.no_wait = no_wait
+
+    def GetSilent(self):
+        return self.silent
+
+    def SetSilent(self,silent):
+        self.silent = silent
 
 class Sprite:
     def __init__(self,surface,offset_x,offset_y,width,height):
@@ -232,7 +249,8 @@ class Player(Actor):
             synchro_shot_cnt = shot_cnt & 1
             if ((pressed & Joystick.A and shot_cnt == 0) or (pressed & Joystick.B and synchro_shot_cnt == 0)):
                 if Shooting.scene.beams.Append(Beam(self.x,self.y)) == True:
-                    Gss.data.beam_sound.play()
+                    if not Gss.settings.GetSilent():
+                        Gss.data.beam_sound.play()
             if self.nocol_cnt > 0:
                 self.nocol_cnt -= 1
             event_velocity = (ScreenInt(self.x) - SCREEN_WIDTH / 3) / 4
@@ -255,7 +273,8 @@ class Player(Actor):
 
     def AddDamage(self,damage):
         Shooting.scene.status.ResetMultilier()
-        Gss.data.explosion_large_sound.play()
+        if not Gss.settings.GetSilent():
+            Gss.data.explosion_large_sound.play()
         for i in range(10):
             velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
             Shooting.scene.explosions.Append(PlayerExplosion(self.x,self.y,velocity[0],velocity[1]))
@@ -319,7 +338,8 @@ class Enemy(Actor):
             Shooting.scene.status.AddScore(100)
 
             # 死
-            Gss.data.explosion_small_sound.play()
+            if not Gss.settings.GetSilent():
+                Gss.data.explosion_small_sound.play()
             type = effect_rand.randrange(10)
             if type < 8:
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)) / 8)
@@ -531,7 +551,8 @@ class VerticalMissileEnemy(Enemy):
             angle = Radian(90)
         else:
             angle = Radian(270)
-        Gss.data.missile_sound.play()
+        if not Gss.settings.GetSilent():
+            Gss.data.missile_sound.play()
         Shooting.scene.enemies.Append(Missile(self.x,self.y,angle))
         yield None
         while True:
@@ -561,7 +582,8 @@ class StraightMissileEnemy(Enemy):
             self.y += self.velocity_y
             if self.velocity_x > 0 and shoot == False:
                 shoot = True
-                Gss.data.missile_sound.play()
+                if not Gss.settings.GetSilent():
+                    Gss.data.missile_sound.play()
                 Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(180)))
             yield None
 
@@ -602,14 +624,16 @@ class MiddleEnemy(Enemy):
             self.x += self.velocity_x
             self.y += self.velocity_y
             if effect_rand.randrange(16) == 0:
-                Gss.data.explosion_small_sound.play()
+                if not Gss.settings.GetSilent():
+                    Gss.data.explosion_small_sound.play()
             if effect_rand.randrange(8) == 0:
                 x = self.x + Fixed(effect_rand.randrange(64) - 32)
                 y = self.y + Fixed(effect_rand.randrange(64) - 32)
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
                 Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
             yield None
-        Gss.data.explosion_sound.play()
+        if not Gss.settings.GetSilent():
+            Gss.data.explosion_sound.play()
         for i in range(8):
             velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
             x = self.x + velocity[0] * 3
@@ -657,7 +681,8 @@ class MiddleMissileEnemy(MiddleEnemy):
             self.y += self.velocity_y
             cnt += 1
             if cnt > 180 and (cnt % 80) == 0:
-                Gss.data.missile_sound.play()
+                if not Gss.settings.GetSilent():
+                    Gss.data.missile_sound.play()
                 Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(240)))
                 Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(210)))
                 Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(150)))
@@ -827,14 +852,16 @@ class BossEnemy(Enemy):
             self.x += self.velocity_x
             self.y += self.velocity_y
             if effect_rand.randrange(16) == 0:
-                Gss.data.explosion_small_sound.play()
+                if not Gss.settings.GetSilent():
+                    Gss.data.explosion_small_sound.play()
             if effect_rand.randrange(3) == 0:
                 x = self.x + Fixed(effect_rand.randrange(128) - 64)
                 y = self.y + Fixed(effect_rand.randrange(128) - 64)
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
                 Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
             yield None
-        Gss.data.explosion_sound.play()
+        if not Gss.settings.GetSilent():
+            Gss.data.explosion_sound.play()
         for i in range(64):
             velocity = RandomEffectVector(Fixed(effect_rand.randrange(24)))
             x = self.x + velocity[0] * 3
@@ -969,7 +996,8 @@ class BossPartEnemy(Enemy):
 
     def ToDestroy(self):
         if self.parent != None:
-            Gss.data.explosion_sound.play()
+            if not Gss.settings.GetSilent():
+                Gss.data.explosion_sound.play()
             for i in range(16):
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(12)))
                 Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity[0],velocity[1]))
@@ -980,7 +1008,8 @@ class BossPartEnemy(Enemy):
             self.parent.ToDamage(0,inc_velocity_y)
             self.parent.SplitChild(self)
             self.SplitFromBoss()
-        Gss.data.explosion_small_sound.play()
+        if not Gss.settings.GetSilent():
+            Gss.data.explosion_small_sound.play()
         Shooting.scene.explosions.Append(Explosion(self.x,self.y,self.velocity_x,self.velocity_y))
         Shooting.scene.enemies.Remove(self)
 
@@ -1030,7 +1059,8 @@ class BossMissileEnemy(BossPartEnemy):
         while True:
             for j in range(31):
                 yield None
-            Gss.data.missile_sound.play()
+            if not Gss.settings.GetSilent():
+                Gss.data.missile_sound.play()
             Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(180)))
             yield None
 
@@ -1571,7 +1601,7 @@ class Status:
 
     def SetCompleted(self):
         self.completed = True
-        self.contestant_score = (self.event_count / 16384.0 + self.score / 2.0 + contestant_rand.random() / 1000.0) * self.penalty
+        self.contestant_score = (self.event_count / 1677216.0 + self.score + contestant_rand.random() / 1000.0) * self.penalty
 
     def GetCompleted(self):
         return self.completed
@@ -1832,9 +1862,9 @@ class EmulatedJoystick(Joystick):
         enemies = self.shooting.scene.enemies
         values = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
         for bullet in bullets:
-            delta = ((bullet.x - player.x) / 16384.0, (bullet.y - player.y) / 16384.0)
+            delta = ((bullet.x - player.x) / 16384.0,(bullet.y - player.y) / 16384.0)
             distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
-            angle = math.atan2(delta[1],  delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
+            angle = math.atan2(delta[1],delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
             index = int(angle / 45.0) % 8
             value = 0.0
             if distance < 100.0:
@@ -1842,9 +1872,9 @@ class EmulatedJoystick(Joystick):
             if values[index] < value:
                 values[index] = value
         for enemy in enemies:
-            delta = ((enemy.x - player.x) / 16384.0, (enemy.y - player.y) / 16384.0)
+            delta = ((enemy.x - player.x) / 16384.0,(enemy.y - player.y) / 16384.0)
             distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
-            angle = math.atan2(delta[1],  delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
+            angle = math.atan2(delta[1],delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
             index = int(angle / 45.0) % 8
             value = 0.0
             if distance < 100.0:
@@ -1946,31 +1976,31 @@ class Contestant:
     def GetScore(self):
         return self.score
 
-    def SetScore(self, score):
+    def SetScore(self,score):
         self.score = score
 
-    def GetAlternated(cls, contestants):
-        elite = None
-        elite_score = 0
+    def GetAlternated(cls,contestants):
+        elites = []
         scores = []
         for contestant in contestants:
             score = contestant.GetScore()
             scores.append(score)
-            if score > elite_score:
-                elite = contestant
-                elite_score = score
+        sorted_scores = sorted(scores,reverse=True)
         new_contestants = []
-        new_contestants.append(elite)
-        scores = sorted(scores, reverse=True)[1:5]
-        for contestant in contestants:
-            score = contestant.GetScore()
-            if score in scores:
-                a_elite = elite.Clone()
-                a_contestant = contestant.Clone()
-                a_contestant.Cross(a_elite)
-                new_contestants.append(a_elite)
-                new_contestants.append(a_contestant)
-        new_contestants.append(Contestant())
+        for i in range(2):
+            contestant = Contestant.GetFromScore(contestants,sorted_scores[i])
+            elites.append(contestant)
+            new_contestants.append(contestant)
+        for i in range(4):
+            score = sorted_scores[i + 2]
+            for j in range(2):
+                elite = elites[j].Clone()
+                contestant = Contestant.GetFromScore(contestants,score)
+                contestant.Cross(elite)
+                new_contestants.append(elite)
+                new_contestants.append(contestant)
+        for i in range(2):
+            new_contestants.append(Contestant())
         return new_contestants
     GetAlternated = classmethod(GetAlternated)
 
@@ -1986,13 +2016,21 @@ class Contestant:
             pickle.dump(saving,file)
     Save = classmethod(Save)
 
+    def GetFromScore(cls,contestants,score):
+        for contestant in contestants:
+            if contestant.GetScore() == score:
+                return contestant
+        return None
+    GetFromScore = classmethod(GetFromScore)
+
 class Gss:
     screen_surface = None
     joystick = None
     data = None
+    settings = None
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-    def __init__(self,contestants,generation):
+    def __init__(self,contestants,generation,settings):
         pygame.init()
         Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT),pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
         pygame.mouse.set_visible(1)
@@ -2000,10 +2038,11 @@ class Gss:
         pygame.joystick.init()
         Gss.joystick = Joystick()
         Gss.data = Data()
+        Gss.settings = settings
         if contestants == None:
             self.generation = 1
             self.contestants = []
-            for i in range(10):
+            for i in range(20):
                 self.contestants.append(Contestant())
         else:
             self.generation = generation
@@ -2021,10 +2060,10 @@ class Gss:
             shooting.MainLoop()
             score = shooting.scene.status.contestant_score
             self.contestants[self.contestant_index].SetScore(score)
-            print("Generation: {}, Contestant: {}, Score: {}".format(self.generation, self.contestant_index, score))
+            print("Generation: {}, Contestant: {}, Score: {}".format(self.generation,self.contestant_index,score))
             Gss.joystick = Joystick()
             self.contestant_index += 1
-            if self.contestant_index >= 10:
+            if self.contestant_index >= 20:
                 self.contestants = Contestant.GetAlternated(self.contestants)
                 self.generation += 1
                 Contestant.Save(self.contestants,self.generation,"gen{}.pickle".format(self.generation))
@@ -2163,8 +2202,11 @@ class Title:
             Gss.data.font.DrawString("BEST LAP: %02d'%02d''%02d" % (lap_time_min,lap_time_sec,lap_time_under_sec),Gss.screen_surface,0,0)
             pygame.display.flip()
             ticks = pygame.time.get_ticks() - begin_ticks
-            if ticks < 16:
-                pygame.time.delay(16 - ticks)
+            frame_time = 16
+            if Gss.settings.GetNoWait():
+                frame_time = 1
+            if ticks < frame_time:
+                pygame.time.delay(frame_time - ticks)
         return state
 
     def Move(self):
@@ -2620,7 +2662,8 @@ class Shooting:
         self.gen = self.Move()
 
     def MainLoop(self):
-        pygame.mixer.music.play(-1)
+        if not Gss.settings.GetSilent():
+            pygame.mixer.music.play(-1)
         event_parser = EventParser(test_events)
 
         state = Shooting.STATE_CONTINUE
@@ -2678,9 +2721,13 @@ class Shooting:
             Shooting.scene.status.Draw(Gss.screen_surface)
             pygame.display.flip()
             ticks = pygame.time.get_ticks() - begin_ticks
-            if ticks < 16:
-                pygame.time.delay(16 - ticks)
-        pygame.mixer.music.stop()
+            frame_time = 16
+            if Gss.settings.GetNoWait():
+                frame_time = 1
+            if ticks < frame_time:
+                pygame.time.delay(frame_time - ticks)
+        if not Gss.settings.GetSilent():
+            pygame.mixer.music.stop()
         lap_time = Shooting.scene.status.GetLapTime()
         if Shooting.scene.status.GetCompleted() == True and lap_time < Gss.best_lap_time:
             Gss.best_lap_time = lap_time
@@ -2708,6 +2755,15 @@ class Shooting:
 if __name__ == "__main__":
     contestants = None
     generation = 0
-    if len(sys.argv) == 2:
-        contestants,generation = Contestant.Load(sys.argv[1])
-    Gss(contestants,generation).Main()
+    settings = Settings()
+    for argument in enumerate(sys.argv):
+        if argument[0] > 0:
+            if argument[1][0] == "-":
+                for character in argument[1][1:]:
+                    if character == "n":
+                        settings.SetNoWait(True)
+                    elif character == "s":
+                        settings.SetSilent(True)
+            else:
+                contestants,generation = Contestant.Load(argument[1])
+    Gss(contestants,generation,settings).Main()
