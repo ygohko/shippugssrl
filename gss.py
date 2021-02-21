@@ -240,8 +240,6 @@ class Player(Actor):
             old_x = self.x
             old_y = self.y
             self.x,self.y = self.collision.RoundToSceneLimit(self.x,self.y)
-            if self.x != old_x and self.y != old_y:
-                Shooting.scene.status.UpdatePenalty(0.1)
             if self.x != old_x and self.x > Fixed(320):
                 Shooting.scene.status.UpdatePenalty(0.1)
             shot_cnt += 1
@@ -332,6 +330,7 @@ class Enemy(Actor):
 
     def AddDamage(self,damage):
         self.shield -= damage
+        Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
             # スコア更新
             Shooting.scene.status.UpdateMultiplier(self.live_cnt)
@@ -656,6 +655,7 @@ class MiddleEnemy(Enemy):
 
     def AddDamage(self,damage):
         self.shield -= damage
+        Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
             # スコア更新
             Shooting.scene.status.UpdateMultiplier(self.live_cnt)
@@ -919,6 +919,7 @@ class BossEnemy(Enemy):
 
     def AddDamage(self,damage):
         self.shield -= damage
+        Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
             # スコア更新
             Shooting.scene.status.UpdateMultiplier(self.live_cnt)
@@ -986,6 +987,7 @@ class BossPartEnemy(Enemy):
 
     def AddDamage(self,damage):
         self.shield -= damage
+        Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
             # スコア更新
             Shooting.scene.status.UpdateMultiplier(self.live_cnt)
@@ -1538,6 +1540,10 @@ class Data:
         self.beam_sound = pygame.mixer.Sound("beam.wav")
 
 class Status:
+    destruction_scale = 0.0
+    frame_scale = 0.0
+    event_scale = 0.0
+
     def __init__(self):
         self.frame_num = 0
         self.begin_ticks = pygame.time.get_ticks()
@@ -1546,9 +1552,13 @@ class Status:
         self.player_stock = 3
         self.event_count = Fixed(0)
         self.event_speed = Fixed(1)
+        self.frame_count = 0
         self.lap_time = 0
         self.completed = False
-        self.contestant_score = 0
+        self.contestant_score = 0.0
+        self.contestant_destruction_score = 0.0
+        self.contestant_frame_score = 0.0
+        self.contestant_event_score = 0.0
         self.penalty = 1.0
 
     def IncrementFrameNum(self):
@@ -1580,6 +1590,7 @@ class Status:
     def IncrementEventCount(self):
         previous_event_count = self.event_count
         self.event_count += self.event_speed
+        self.frame_count += 1
         return ScreenInt(self.event_count) - ScreenInt(previous_event_count)
 
     def AddEventSpeed(self,velocity):
@@ -1601,7 +1612,10 @@ class Status:
 
     def SetCompleted(self):
         self.completed = True
-        self.contestant_score = (self.event_count / 1677216.0 + self.score + contestant_rand.random() / 1000.0) * self.penalty
+        self.contestant_destruction_score = float(self.score)
+        self.contestant_frame_score = float(self.frame_count)
+        self.contestant_event_score = float(ScreenInt(self.event_count))
+        self.contestant_score = (self.contestant_destruction_score * Status.destruction_scale + self.contestant_frame_score * Status.frame_scale + self.contestant_event_score * Status.event_scale + contestant_rand.random()) * self.penalty
 
     def GetCompleted(self):
         return self.completed
@@ -1609,6 +1623,12 @@ class Status:
     def UpdatePenalty(self,penalty):
         if self.penalty > penalty:
             self.penalty = penalty
+
+    def UpdateScales(cls):
+        Status.destruction_scale = contestant_rand.random()
+        Status.frame_scale = contestant_rand.random()
+        Status.event_scale = contestant_rand.random()
+    UpdateScales = classmethod(UpdateScales)
 
     def Draw(self,screen_surface):
         lap_time_min = self.lap_time / (60 * 60)
@@ -1773,17 +1793,21 @@ class Joystick:
         return self.trigger
 
 class NeuralNetwork:
-    GENE_COUNT = 18 * 20 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 4 * 18 + 4
+    INPUT_COUNT = 28
+    OUTPUT_COUNT = 4
+    GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
 
     def __init__(self):
-        self.w1 = np.zeros((18,20))
+        self.w1 = np.zeros((18,NeuralNetwork.INPUT_COUNT))
         self.b1 = np.zeros((18,1))
         self.w2 = np.zeros((18,18))
         self.b2 = np.zeros((18,1))
         self.w3 = np.zeros((18,18))
         self.b3 = np.zeros((18,1))
-        self.w4 = np.zeros((4,18))
-        self.b4 = np.zeros((4,1))
+        self.w4 = np.zeros((18,18))
+        self.b4 = np.zeros((18,1))
+        self.w5 = np.zeros((NeuralNetwork.OUTPUT_COUNT,18))
+        self.b5 = np.zeros((NeuralNetwork.OUTPUT_COUNT,1))
 
     def Load(self,genes):
         index = 0
@@ -1823,9 +1847,18 @@ class NeuralNetwork:
         for i in range(shape[0]):
             self.b4[i,0] = genes[index]
             index += 1
+        shape = self.w5.shape
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                self.w5[i,j] = genes[index]
+                index += 1
+        shape = self.b5.shape
+        for i in range(shape[0]):
+            self.b5[i,0] = genes[index]
+            index += 1
 
     def Infer(self,values):
-        input = np.array(values).reshape((20,1))
+        input = np.array(values).reshape((NeuralNetwork.INPUT_COUNT,1))
         # print("input: {}".format(input))
         a_value = np.dot(self.w1,input)
         a_value = np.add(a_value,self.b1)
@@ -1839,10 +1872,14 @@ class NeuralNetwork:
         c_value = np.add(c_value,self.b3)
         c_value = np.maximum(c_value,0.0)
         # print("c_value: {}".format(c_value))
-        output = np.dot(self.w4,c_value)
-        output = np.add(output,self.b4)
+        d_value = np.dot(self.w4,c_value)
+        d_value = np.add(d_value,self.b4)
+        d_value = np.maximum(d_value,0.0)
+        # print("d_value: {}".format(d_value))
+        output = np.dot(self.w5,d_value)
+        output = np.add(output,self.b5)
         # print("output: {}".format(output))
-        return output.reshape((4,)).tolist()
+        return output.reshape((NeuralNetwork.OUTPUT_COUNT,)).tolist()
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
@@ -1860,7 +1897,8 @@ class EmulatedJoystick(Joystick):
         player = self.shooting.scene.player
         bullets = self.shooting.scene.bullets
         enemies = self.shooting.scene.enemies
-        values = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
+        explosions = self.shooting.scene.explosions
+        values = [0.0] * NeuralNetwork.INPUT_COUNT
         for bullet in bullets:
             delta = ((bullet.x - player.x) / 16384.0,(bullet.y - player.y) / 16384.0)
             distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
@@ -1895,26 +1933,45 @@ class EmulatedJoystick(Joystick):
                     value = 1.0
                 if index < 4 and values[index + 12] < value:
                     values[index + 12] = value
+        for explosion in explosions:
+            if type(explosion) == BulletExplosion:
+                delta = ((explosion.x - player.x) / 16384.0,(explosion.y - player.y) / 16384.0)
+                distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
+                angle = math.atan2(delta[1],delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
+                if angle < 0.0:
+                    index = int(angle / -15.0)
+                    value = distance / 100.0
+                    if value > 1.0:
+                        value = 1.0
+                    if index < 4 and values[index + 16] < value:
+                        values[index + 16] = value
+                else:
+                    index = int(angle / 15.0)
+                    value = distance / 100.0
+                    if value > 1.0:
+                        value = 1.0
+                    if index < 4 and values[index + 20] < value:
+                        values[index + 20] = value
         x = player.x / 16384.0
         y = player.y / 16384.0
         value = 0.0
         if x < 100.0:
             value = (100.0 - x) / 100.0
-        values[16] = value
+        values[24] = value
         value = 0.0
         if x > ((SCREEN_WIDTH / 2) - 100.0):
             value = (x - ((SCREEN_WIDTH / 2) - 100.0)) / 100.0
             if value > 1.0:
                 value = 1.0
-        values[17] = value
+        values[25] = value
         value = 0.0
         if y < 100.0:
             value = (100.0 - y) / 100.0
-        values[18] = value
+        values[26] = value
         value = 0.0
         if y > (SCREEN_HEIGHT - 100.0):
             value = (y - (SCREEN_HEIGHT - 100.0)) / 100.0
-        values[19] = value
+        values[27] = value
         inferred = self.neural_network.Infer(values)
         # print(values,inferred)
         self.pressed = 0
@@ -1948,27 +2005,51 @@ class EmulatedJoystick(Joystick):
         return self.trigger
 
 class Contestant:
+    ALPHA = 0.2
+    MUTATION_RATE = 0.2
+
     def __init__(self):
         self.genes = []
         for i in range(NeuralNetwork.GENE_COUNT):
             self.genes.append(contestant_rand.random() * 2.0 - 1.0)
         self.score = 0
+        self.destruction_score = 0
+        self.frame_score = 0
+        self.event_score = 0
 
     def Clone(self):
         contestant = Contestant()
         contestant.genes = self.genes[:]
         contestant.score = self.score
+        contestant.destruction_score = self.destruction_score
+        contestant.frame_score = self.frame_score
+        contestant.event_score = self.event_score
         return contestant
 
     def Cross(self,contestant):
         for i in range(len(self.genes)):
-            if contestant_rand.random() <= 0.5 * 0.01:
+            if contestant_rand.random() <= Contestant.MUTATION_RATE * 0.01:
                 self.genes[i] = contestant_rand.random() * 2.0 - 1.0
                 contestant.genes[i] = contestant_rand.random() * 2.0 - 1.0
             if contestant_rand.randrange(2) == 1:
                 value = self.genes[i]
                 self.genes[i] = contestant.genes[i]
                 contestant.genes[i] = value
+
+    def CrossWithBCXAlpha(self,contestant):
+        for i in range(len(self.genes)):
+            if contestant_rand.random() <= Contestant.MUTATION_RATE * 0.01:
+                self.genes[i] = contestant_rand.random() * 2.0 - 1.0
+                contestant.genes[i] = contestant_rand.random() * 2.0 - 1.0
+            else:
+                min_value = min(self.genes[i], contestant.genes[i])
+                max_value = max(self.genes[i], contestant.genes[i])
+                diff = max_value - min_value
+                min_value -= diff * Contestant.ALPHA
+                diff += diff * Contestant.ALPHA * 2.0
+                ratio = contestant_rand.random()
+                self.genes[i] = min_value + diff * ratio
+                contestant.genes[i] = min_value + diff * (1.0 - ratio)
 
     def GetGenes(self):
         return self.genes
@@ -1978,6 +2059,24 @@ class Contestant:
 
     def SetScore(self,score):
         self.score = score
+
+    def GetDestructionScore(self):
+        return self.destruction_score
+
+    def SetDestructionScore(self,destruction_score):
+        self.destruction_score = destruction_score
+
+    def GetFrameScore(self):
+        return self.frame_score
+
+    def SetFrameScore(self,frame_score):
+        self.frame_score = frame_score
+
+    def GetEventScore(self):
+        return self.event_score
+
+    def SetEventScore(self,event_score):
+        self.event_score = event_score
 
     def GetAlternated(cls,contestants):
         elites = []
@@ -1995,12 +2094,23 @@ class Contestant:
             score = sorted_scores[i + 2]
             for j in range(2):
                 elite = elites[j].Clone()
-                contestant = Contestant.GetFromScore(contestants,score)
+                contestant = Contestant.GetFromScore(contestants,score).Clone()
                 contestant.Cross(elite)
-                new_contestants.append(elite)
                 new_contestants.append(contestant)
-        for i in range(2):
-            new_contestants.append(Contestant())
+                elite = elites[j].Clone()
+                contestant = Contestant.GetFromScore(contestants,score).Clone()
+                contestant.CrossWithBCXAlpha(elite)
+                new_contestants.append(contestant)
+        a_index = contestant_rand.randrange(len(contestants))
+        b_index = contestant_rand.randrange(len(contestants))
+        a_contestant = contestants[a_index].Clone()
+        b_contestant = contestants[b_index].Clone()
+        b_contestant.Cross(a_contestant)
+        new_contestants.append(b_contestant)
+        a_contestant = contestants[a_index].Clone()
+        b_contestant = contestants[b_index].Clone()
+        b_contestant.CrossWithBCXAlpha(a_contestant)
+        new_contestants.append(b_contestant)
         return new_contestants
     GetAlternated = classmethod(GetAlternated)
 
@@ -2050,6 +2160,7 @@ class Gss:
         self.contestant_index = 0
 
     def Main(self):
+        Status.UpdateScales()
         while True:
             if Title().MainLoop() == Title.STATE_EXIT_QUIT:
                 return
@@ -2060,7 +2171,13 @@ class Gss:
             shooting.MainLoop()
             score = shooting.scene.status.contestant_score
             self.contestants[self.contestant_index].SetScore(score)
-            print("Generation: {}, Contestant: {}, Score: {}".format(self.generation,self.contestant_index,score))
+            destruction_score = shooting.scene.status.contestant_destruction_score
+            self.contestants[self.contestant_index].SetDestructionScore(destruction_score)
+            frame_score = shooting.scene.status.contestant_frame_score
+            self.contestants[self.contestant_index].SetFrameScore(frame_score)
+            event_score = shooting.scene.status.contestant_event_score
+            self.contestants[self.contestant_index].SetEventScore(event_score)
+            print("Generation: {}, Contestant: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation,self.contestant_index,score,destruction_score,frame_score,event_score))
             Gss.joystick = Joystick()
             self.contestant_index += 1
             if self.contestant_index >= 20:
@@ -2068,6 +2185,8 @@ class Gss:
                 self.generation += 1
                 Contestant.Save(self.contestants,self.generation,"gen{}.pickle".format(self.generation))
                 self.contestant_index = 0
+                if (self.generation % 10) == 0:
+                    Status.UpdateScales()
 
 class LogoPart(Actor):
     def __init__(self,x,y):
