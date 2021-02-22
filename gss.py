@@ -2006,7 +2006,7 @@ class EmulatedJoystick(Joystick):
 
 class Contestant:
     ALPHA = 0.2
-    MUTATION_RATE = 0.2
+    MUTATION_RATE = 0.5
 
     def __init__(self):
         self.genes = []
