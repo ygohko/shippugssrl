@@ -43,11 +43,14 @@ FIXED_WIDTH = SCREEN_WIDTH * FIXED_MUL
 FIXED_HEIGHT = SCREEN_HEIGHT * FIXED_MUL
 JOYSTICK_THRESHOLD = 0.5
 
+
 def ScreenInt(val):
     return int(val / FIXED_MUL)
 
+
 def Fixed(val):
     return int(val * FIXED_MUL)
+
 
 def Sign(val):
     if val > 0:
@@ -56,8 +59,10 @@ def Sign(val):
         return -1
     return 0
 
+
 def Radian(deg):
     return (deg * 2.0 * math.pi) / 360.0
+
 
 def RandomEnemyVector(length):
     x = (enemy_rand.randrange(128) + 1) * (enemy_rand.randrange(2) * 3 - 1)
@@ -65,7 +70,8 @@ def RandomEnemyVector(length):
     current_length = math.sqrt(x * x + y * y)
     x = int(float(x) * length / current_length)
     y = int(float(y) * length / current_length)
-    return (x,y)
+    return (x, y)
+
 
 def RandomEffectVector(length):
     x = (effect_rand.randrange(128) + 1) * (effect_rand.randrange(2) * 3 - 1)
@@ -73,7 +79,8 @@ def RandomEffectVector(length):
     current_length = math.sqrt(x * x + y * y)
     x = int(float(x) * length / current_length)
     y = int(float(y) * length / current_length)
-    return (x,y)
+    return (x, y)
+
 
 class Settings:
     def __init__(self):
@@ -83,38 +90,40 @@ class Settings:
     def GetNoWait(self):
         return self.no_wait
 
-    def SetNoWait(self,no_wait):
+    def SetNoWait(self, no_wait):
         self.no_wait = no_wait
 
     def GetSilent(self):
         return self.silent
 
-    def SetSilent(self,silent):
+    def SetSilent(self, silent):
         self.silent = silent
 
+
 class Sprite:
-    def __init__(self,surface,offset_x,offset_y,width,height):
+    def __init__(self, surface, offset_x, offset_y, width, height):
         self.surface = surface
         self.offset_x = offset_x
         self.offset_y = offset_y
         self.width = width
         self.height = height
-        self.rect = (0,0,width,height)
+        self.rect = (0, 0, width, height)
 
-    def Draw(self,screen_surface,x,y):
-        screen_surface.blit(self.surface,(ScreenInt(x) + self.offset_x,ScreenInt(y) + self.offset_y),self.rect)
+    def Draw(self, screen_surface, x, y):
+        screen_surface.blit(self.surface, (ScreenInt(x) + self.offset_x, ScreenInt(y) + self.offset_y), self.rect)
 
-    def SetFrame(self,frame_num):
-        self.rect = (self.width * frame_num,0,self.width,self.height)
+    def SetFrame(self, frame_num):
+        self.rect = (self.width * frame_num, 0, self.width, self.height)
+
 
 class Collision:
-    def __init__(self,min_x,min_y,max_x,max_y):
+    def __init__(self, min_x, min_y, max_x, max_y):
         self.min_x = min_x
         self.min_y = min_y
         self.max_x = max_x
         self.max_y = max_y
 
-    def Check(self,x,y,other,other_x,other_y):
+    def Check(self, x, y, other, other_x, other_y):
         self_min_x = x + self.min_x
         self_min_y = y + self.min_y
         self_max_x = x + self.max_x
@@ -123,26 +132,26 @@ class Collision:
         other_min_y = other_y + other.min_y
         other_max_x = other_x + other.max_x
         other_max_y = other_y + other.max_y
-        if (self_min_x <= other_min_x <= self_max_x \
-            or self_min_x <= other_max_x <= self_max_x \
-            or other_min_x <= self_min_x <= other_max_x \
+        if (self_min_x <= other_min_x <= self_max_x
+            or self_min_x <= other_max_x <= self_max_x
+            or other_min_x <= self_min_x <= other_max_x
             or other_min_x <= self_max_x <= other_max_x) \
-                and (self_min_y <= other_min_y <= self_max_y \
-                    or self_min_y <= other_max_y <= self_max_y \
-                    or other_min_y <= self_min_y <= other_max_y \
-                    or other_min_y <= self_max_y <= other_max_y):
-                        return True
+                and (self_min_y <= other_min_y <= self_max_y
+                     or self_min_y <= other_max_y <= self_max_y
+                     or other_min_y <= self_min_y <= other_max_y
+                     or other_min_y <= self_max_y <= other_max_y):
+            return True
         return False
 
-    def CheckSceneOut(self,x,y):
+    def CheckSceneOut(self, x, y):
         if (x + self.max_x) < 0 \
-            or (x + self.min_x) > FIXED_WIDTH \
-            or (y + self.max_y) < 0 \
-            or (y + self.min_y) > FIXED_HEIGHT:
-                return True
+                or (x + self.min_x) > FIXED_WIDTH \
+                or (y + self.max_y) < 0 \
+                or (y + self.min_y) > FIXED_HEIGHT:
+            return True
         return False
 
-    def RoundToSceneLimit(self,x,y):
+    def RoundToSceneLimit(self, x, y):
         if (x + self.min_x) < 0:
             x = 0 - self.min_x
         if (x + self.max_x) > FIXED_WIDTH:
@@ -151,38 +160,41 @@ class Collision:
             y = 0 - self.min_y
         if (y + self.max_y) > FIXED_HEIGHT:
             y = FIXED_HEIGHT - self.max_y
-        return x,y
+        return x, y
+
 
 class PointCollision(Collision):
-    def Check(self,x,y,other,other_x,other_y):
+    def Check(self, x, y, other, other_x, other_y):
         if (other_x + other.min_x < x < other_x + other.max_x) \
-            and (other_y + other.min_y < y < other_y + other.max_y):
-                return True
+                and (other_y + other.min_y < y < other_y + other.max_y):
+            return True
         return False
+
 
 class Actor:
     def __init__(self):
         self.x = 0
         self.y = 0
-        self.sprite = Sprite(Gss.data.enemy_surface,-16,-16,32,32)
+        self.sprite = Sprite(Gss.data.enemy_surface, -16, -16, 32, 32)
 
     def Process(self):
         pass
 
-    def Draw(self,screen_surface):
-        self.sprite.Draw(screen_surface,self.x,self.y)
+    def Draw(self, screen_surface):
+        self.sprite.Draw(screen_surface, self.x, self.y)
 
-    def CheckCollision(self,other):
-        return self.collision.Check(self.x,self.y,other.collision,other.x,other.y)
+    def CheckCollision(self, other):
+        return self.collision.Check(self.x, self.y, other.collision, other.x, other.y)
 
     def CheckSceneOut(self):
-        return self.collision.CheckSceneOut(self.x,self.y)
+        return self.collision.CheckSceneOut(self.x, self.y)
 
-    def Search(self,other):
-        angle = math.atan2(other.y - self.y,other.x - self.x)
+    def Search(self, other):
+        angle = math.atan2(other.y - self.y, other.x - self.x)
         if angle < 0.0:
             angle += 2 * math.pi
         return angle
+
 
 class Player(Actor):
     APPEAR = 0
@@ -191,8 +203,8 @@ class Player(Actor):
 
     def __init__(self):
         Actor.__init__(self)
-        self.sprite = Sprite(Gss.data.player_surface,-16,-16,32,32)
-        self.collision = Collision(Fixed(-8),Fixed(-8),Fixed(8),Fixed(8))
+        self.sprite = Sprite(Gss.data.player_surface, -16, -16, 32, 32)
+        self.collision = Collision(Fixed(-8), Fixed(-8), Fixed(8), Fixed(8))
         self.state = Player.APPEAR
         self.nocol_cnt = 0
         self.gen = self.Appear()
@@ -200,10 +212,10 @@ class Player(Actor):
     def Process(self):
         self.gen.__next__()
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         if self.state == Player.APPEAR \
-            or (self.state == Player.MOVE and (self.nocol_cnt & 1) == 0):
-                Actor.Draw(self,screen_surface)
+                or (self.state == Player.MOVE and (self.nocol_cnt & 1) == 0):
+            Actor.Draw(self, screen_surface)
 
     def Appear(self):
         self.x = Fixed(0)
@@ -218,7 +230,7 @@ class Player(Actor):
             smoke_cnt += 1
             smoke_cnt &= 1
             if smoke_cnt == 0:
-                Shooting.scene.explosions.Append(Smoke(self.x,self.y,Fixed(-18) + Fixed(effect_rand.randrange(3) - 1),Fixed(effect_rand.randrange(3) - 1)))
+                Shooting.scene.explosions.Append(Smoke(self.x, self.y, Fixed(-18) + Fixed(effect_rand.randrange(3) - 1), Fixed(effect_rand.randrange(3) - 1)))
             yield None
         self.state = Player.MOVE
         self.nocol_cnt = 120
@@ -239,14 +251,14 @@ class Player(Actor):
                 self.y += Fixed(5)
             old_x = self.x
             old_y = self.y
-            self.x,self.y = self.collision.RoundToSceneLimit(self.x,self.y)
+            self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
                 Shooting.scene.status.UpdatePenalty(0.1)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
             if ((pressed & Joystick.A and shot_cnt == 0) or (pressed & Joystick.B and synchro_shot_cnt == 0)):
-                if Shooting.scene.beams.Append(Beam(self.x,self.y)) == True:
+                if Shooting.scene.beams.Append(Beam(self.x, self.y)) == True:
                     if not Gss.settings.GetSilent():
                         Gss.data.beam_sound.play()
             if self.nocol_cnt > 0:
@@ -269,13 +281,13 @@ class Player(Actor):
         self.Process()
         yield None
 
-    def AddDamage(self,damage):
+    def AddDamage(self, damage):
         Shooting.scene.status.ResetMultilier()
         if not Gss.settings.GetSilent():
             Gss.data.explosion_large_sound.play()
         for i in range(10):
             velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
-            Shooting.scene.explosions.Append(PlayerExplosion(self.x,self.y,velocity[0],velocity[1]))
+            Shooting.scene.explosions.Append(PlayerExplosion(self.x, self.y, velocity[0], velocity[1]))
         self.state = Player.DESTROY
         self.gen = self.Destroy()
 
@@ -289,14 +301,15 @@ class Player(Actor):
             return True
         return False
 
+
 class Beam(Actor):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Actor.__init__(self)
         self.x = x
         self.y = y
         self.cnt = 0
-        self.sprite = Sprite(Gss.data.beam_surface,-16,-16,48,32)
-        self.collision = Collision(Fixed(-16),Fixed(-16),Fixed(16),Fixed(16))
+        self.sprite = Sprite(Gss.data.beam_surface, -16, -16, 48, 32)
+        self.collision = Collision(Fixed(-16), Fixed(-16), Fixed(16), Fixed(16))
 
     def Process(self):
         self.cnt += 1
@@ -305,6 +318,7 @@ class Beam(Actor):
         self.sprite.SetFrame(self.cnt)
         if self.CheckSceneOut() == True:
             Shooting.scene.beams.Remove(self)
+
 
 class Enemy(Actor):
     APPEAR = 0
@@ -320,15 +334,15 @@ class Enemy(Actor):
         self.shield = 1
         self.live_cnt = 0
         self.state = Enemy.MOVE
-        self.sprite = Sprite(Gss.data.enemy_surface,-16,-16,32,32)
-        self.collision = Collision(Fixed(-16),Fixed(-16),Fixed(16),Fixed(16))
+        self.sprite = Sprite(Gss.data.enemy_surface, -16, -16, 32, 32)
+        self.collision = Collision(Fixed(-16), Fixed(-16), Fixed(16), Fixed(16))
 
     def Process(self):
         self.live_cnt += 1
         if self.CheckSceneOut() == True:
             Shooting.scene.enemies.Remove(self)
 
-    def AddDamage(self,damage):
+    def AddDamage(self, damage):
         self.shield -= damage
         Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
@@ -344,20 +358,20 @@ class Enemy(Actor):
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)) / 8)
                 velocity_x = self.velocity_x + velocity[0]
                 velocity_y = self.velocity_y + velocity[1]
-                Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
+                Shooting.scene.explosions.Append(Explosion(self.x, self.y, velocity_x, velocity_y))
             elif type == 8:
                 for i in range(8):
                     velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
                     velocity_x = self.velocity_x + velocity[0]
                     velocity_y = self.velocity_y + velocity[1]
-                    Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
+                    Shooting.scene.explosions.Append(Explosion(self.x, self.y, velocity_x, velocity_y))
             else:
                 base_velocity = RandomEffectVector(Fixed(2))
                 for i in range(8):
                     velocity = RandomEffectVector(Fixed(1))
                     velocity_x = self.velocity_x + base_velocity[0] * i + velocity[0]
                     velocity_y = self.velocity_y + base_velocity[1] * i + velocity[1]
-                    Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity_x,velocity_y))
+                    Shooting.scene.explosions.Append(Explosion(self.x, self.y, velocity_x, velocity_y))
             Shooting.scene.enemies.Remove(self)
 
     def HasCollision(self):
@@ -365,8 +379,9 @@ class Enemy(Actor):
             return True
         return False
 
+
 class StraightEnemy(Enemy):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -389,11 +404,12 @@ class StraightEnemy(Enemy):
             self.y += self.velocity_y
             cnt += 1
             if cnt == 50 or cnt == 100:
-                Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player),5))
+                Shooting.scene.bullets.Append(Bullet.FromAngle(self.x, self.y, self.Search(Shooting.scene.player), 5))
             yield None
 
+
 class StraightBulletEnemy(Enemy):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -416,11 +432,12 @@ class StraightBulletEnemy(Enemy):
             self.y += self.velocity_y
             cnt += 1
             if (cnt & 7) == 0:
-                Shooting.scene.bullets.Append(Bullet(self.x,self.y,Fixed(enemy_rand.randrange(5) + 0.2),Fixed(enemy_rand.randrange(4) * 2 - 3)))
+                Shooting.scene.bullets.Append(Bullet(self.x, self.y, Fixed(enemy_rand.randrange(5) + 0.2), Fixed(enemy_rand.randrange(4) * 2 - 3)))
             yield None
 
+
 class StayEnemy(Enemy):
-    def __init__(self,x,y,velocity_y):
+    def __init__(self, x, y, velocity_y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -444,11 +461,12 @@ class StayEnemy(Enemy):
             self.y += self.velocity_y
             cnt += 1
             if cnt > 60 and (cnt & 31) == 0:
-                Shooting.scene.bullets.Append(Bullet(self.x,self.y,Fixed(-5),Fixed(enemy_rand.randrange(7) - 3)))
+                Shooting.scene.bullets.Append(Bullet(self.x, self.y, Fixed(-5), Fixed(enemy_rand.randrange(7) - 3)))
             yield None
 
+
 class RollEnemy(Enemy):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -473,7 +491,7 @@ class RollEnemy(Enemy):
             self.y += self.velocity_y
             cnt += 1
             if (cnt & 63) == 0:
-                Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player),5))
+                Shooting.scene.bullets.Append(Bullet.FromAngle(self.x, self.y, self.Search(Shooting.scene.player), 5))
             yield None
 
     def Roll(self):
@@ -484,8 +502,9 @@ class RollEnemy(Enemy):
         while True:
             yield Radian(270.0)
 
+
 class BackwordEnemy(Enemy):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -511,12 +530,13 @@ class BackwordEnemy(Enemy):
             self.y += self.velocity_y
             cnt += 1
             if cnt >= 120 and (cnt & 31) == 0:
-                for bullet in Bullet.FromAngle3Way(self.x,self.y,self.Search(Shooting.scene.player),Radian(12),5):
+                for bullet in Bullet.FromAngle3Way(self.x, self.y, self.Search(Shooting.scene.player), Radian(12), 5):
                     Shooting.scene.bullets.Append(bullet)
             yield None
 
+
 class VerticalMissileEnemy(Enemy):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -552,7 +572,7 @@ class VerticalMissileEnemy(Enemy):
             angle = Radian(270)
         if not Gss.settings.GetSilent():
             Gss.data.missile_sound.play()
-        Shooting.scene.enemies.Append(Missile(self.x,self.y,angle))
+        Shooting.scene.enemies.Append(Missile(self.x, self.y, angle))
         yield None
         while True:
             self.velocity_x -= Fixed(0.1)
@@ -560,8 +580,9 @@ class VerticalMissileEnemy(Enemy):
             self.y += self.velocity_y
             yield None
 
+
 class StraightMissileEnemy(Enemy):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -583,19 +604,20 @@ class StraightMissileEnemy(Enemy):
                 shoot = True
                 if not Gss.settings.GetSilent():
                     Gss.data.missile_sound.play()
-                Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(180)))
+                Shooting.scene.enemies.Append(Missile(self.x, self.y, Radian(180)))
             yield None
 
+
 class MiddleEnemy(Enemy):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
         self.velocity_x = Fixed(-5)
         self.shield = 32
         self.gen = self.Move()
-        self.sprite = Sprite(Gss.data.middleenemy_surface,-64,-64,128,128)
-        self.collision = Collision(Fixed(-64),Fixed(-64),Fixed(64),Fixed(64))
+        self.sprite = Sprite(Gss.data.middleenemy_surface, -64, -64, 128, 128)
+        self.collision = Collision(Fixed(-64), Fixed(-64), Fixed(64), Fixed(64))
 
     def Process(self):
         self.gen.__next__()
@@ -629,7 +651,7 @@ class MiddleEnemy(Enemy):
                 x = self.x + Fixed(effect_rand.randrange(64) - 32)
                 y = self.y + Fixed(effect_rand.randrange(64) - 32)
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
-                Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
+                Shooting.scene.explosions.Append(Explosion(x, y, velocity[0], velocity[1]))
             yield None
         if not Gss.settings.GetSilent():
             Gss.data.explosion_sound.play()
@@ -637,7 +659,7 @@ class MiddleEnemy(Enemy):
             velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
             x = self.x + velocity[0] * 3
             y = self.y + velocity[1] * 3
-            Shooting.scene.explosions.Append(BigExplosion(x,y,velocity[0],velocity[1]))
+            Shooting.scene.explosions.Append(BigExplosion(x, y, velocity[0], velocity[1]))
         Shooting.scene.enemies.Remove(self)
         yield None
 
@@ -648,12 +670,12 @@ class MiddleEnemy(Enemy):
         while True:
             for i in range(interval):
                 yield None
-            Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player) + Radian(enemy_rand.randrange(32) - 16),5))
+            Shooting.scene.bullets.Append(Bullet.FromAngle(self.x, self.y, self.Search(Shooting.scene.player) + Radian(enemy_rand.randrange(32) - 16), 5))
             interval -= 1
             if interval <= 0:
                 interval = 1
 
-    def AddDamage(self,damage):
+    def AddDamage(self, damage):
         self.shield -= damage
         Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
@@ -664,9 +686,10 @@ class MiddleEnemy(Enemy):
             self.state = Enemy.DESTROY
             self.gen = self.Destroy()
 
+
 class MiddleMissileEnemy(MiddleEnemy):
-    def __init__(self,x,y):
-        MiddleEnemy.__init__(self,x,y)
+    def __init__(self, x, y):
+        MiddleEnemy.__init__(self, x, y)
 
     def Process(self):
         self.gen.__next__()
@@ -683,10 +706,10 @@ class MiddleMissileEnemy(MiddleEnemy):
             if cnt > 180 and (cnt % 80) == 0:
                 if not Gss.settings.GetSilent():
                     Gss.data.missile_sound.play()
-                Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(240)))
-                Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(210)))
-                Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(150)))
-                Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(120)))
+                Shooting.scene.enemies.Append(Missile(self.x, self.y, Radian(240)))
+                Shooting.scene.enemies.Append(Missile(self.x, self.y, Radian(210)))
+                Shooting.scene.enemies.Append(Missile(self.x, self.y, Radian(150)))
+                Shooting.scene.enemies.Append(Missile(self.x, self.y, Radian(120)))
             yield None
         while True:
             self.velocity_x -= Fixed(0.1)
@@ -694,11 +717,12 @@ class MiddleMissileEnemy(MiddleEnemy):
             self.y += self.velocity_y
             yield None
 
-class BossEnemy(Enemy):
-    GRANDCHILD_INDEX_LIST = (None,None,4,5,None,None)
-    PAIR_CHILD_INDEX_LIST = (None,None,3,2,5,4)
 
-    def __init__(self,x,y):
+class BossEnemy(Enemy):
+    GRANDCHILD_INDEX_LIST = (None, None, 4, 5, None, None)
+    PAIR_CHILD_INDEX_LIST = (None, None, 3, 2, 5, 4)
+
+    def __init__(self, x, y):
         Enemy.__init__(self)
         self.x = x
         self.y = y
@@ -707,9 +731,10 @@ class BossEnemy(Enemy):
         self.shield = 192
         self.gen = self.Appear()
         self.watch_children_gen = self.WatchChildren()
-        self.sprite = Sprite(Gss.data.bossenemy_surface,-128,-128,256,256)
-        self.collision = Collision(Fixed(-128),Fixed(-128),Fixed(128),Fixed(128))
-        self.children = [BossBatteryEnemy(Fixed(-64),Fixed(-128 - 16),self),BossBatteryEnemy(Fixed(-64),Fixed(128 + 16),self),BossSpreadBulletEnemy(Fixed(64),Fixed(-128 - 16),self),BossSpreadBulletEnemy(Fixed(64),Fixed(128 + 16),self),BossMissileEnemy(Fixed(80),Fixed(-128 - 48),self),BossMissileEnemy(Fixed(80),Fixed(128 + 48),self)]
+        self.sprite = Sprite(Gss.data.bossenemy_surface, -128, -128, 256, 256)
+        self.collision = Collision(Fixed(-128), Fixed(-128), Fixed(128), Fixed(128))
+        self.children = [BossBatteryEnemy(Fixed(-64), Fixed(-128 - 16), self), BossBatteryEnemy(Fixed(-64), Fixed(128 + 16), self), BossSpreadBulletEnemy(Fixed(64), Fixed(-128 - 16), self),
+                         BossSpreadBulletEnemy(Fixed(64), Fixed(128 + 16), self), BossMissileEnemy(Fixed(80), Fixed(-128 - 48), self), BossMissileEnemy(Fixed(80), Fixed(128 + 48), self)]
         for child in self.children:
             Shooting.scene.enemies.Append(child)
 
@@ -720,7 +745,7 @@ class BossEnemy(Enemy):
             if child != None:
                 child.UpdatePosition()
 
-    def SplitChild(self,child):
+    def SplitChild(self, child):
         for i in range(len(self.children)):
             if self.children[i] is child:
                 self.children[i] = None
@@ -772,7 +797,7 @@ class BossEnemy(Enemy):
                 self.y += self.velocity_y
                 if (i & 1) == 0:
                     velocity = RandomEffectVector(Fixed(effect_rand.randrange(4)))
-                    Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(effect_rand.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
+                    Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128), self.y + Fixed(effect_rand.randrange(256) - 128), Fixed(-4) + velocity[0], Fixed(0) + velocity[1]))
                 yield None
             for i in range(60):
                 if self.velocity_y < self.target_velocity_y:
@@ -782,7 +807,7 @@ class BossEnemy(Enemy):
                         self.velocity_y += Fixed(-0.02)
                 self.x += self.velocity_x
                 self.y += self.velocity_y
-                Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128),self.y + Fixed(enemy_rand.randrange(256) - 128),Fixed(-16),Fixed(0)))
+                Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128), self.y + Fixed(enemy_rand.randrange(256) - 128), Fixed(-16), Fixed(0)))
                 yield None
 
     def GoBerserk(self):
@@ -794,12 +819,12 @@ class BossEnemy(Enemy):
                 self.y += self.velocity_y
                 if (i & 1) == 0:
                     velocity = RandomEffectVector(Fixed(effect_rand.randrange(4)))
-                    Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128),self.y + Fixed(effect_rand.randrange(256) - 128),Fixed(-4) + velocity[0],Fixed(0) + velocity[1]))
+                    Shooting.scene.explosions.Append(BulletExplosion(self.x - Fixed(128), self.y + Fixed(effect_rand.randrange(256) - 128), Fixed(-4) + velocity[0], Fixed(0) + velocity[1]))
                 yield None
             for i in range(60):
                 self.x += self.velocity_x
                 self.y += self.velocity_y
-                Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128),self.y + Fixed(enemy_rand.randrange(256) - 128),Fixed(-16),Fixed(0)))
+                Shooting.scene.bullets.Append(LongBullet(self.x - Fixed(128), self.y + Fixed(enemy_rand.randrange(256) - 128), Fixed(-16), Fixed(0)))
                 yield None
             for i in range(45):
                 self.x += self.velocity_x
@@ -858,7 +883,7 @@ class BossEnemy(Enemy):
                 x = self.x + Fixed(effect_rand.randrange(128) - 64)
                 y = self.y + Fixed(effect_rand.randrange(128) - 64)
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(8)))
-                Shooting.scene.explosions.Append(Explosion(x,y,velocity[0],velocity[1]))
+                Shooting.scene.explosions.Append(Explosion(x, y, velocity[0], velocity[1]))
             yield None
         if not Gss.settings.GetSilent():
             Gss.data.explosion_sound.play()
@@ -866,7 +891,7 @@ class BossEnemy(Enemy):
             velocity = RandomEffectVector(Fixed(effect_rand.randrange(24)))
             x = self.x + velocity[0] * 3
             y = self.y + velocity[1] * 3
-            Shooting.scene.explosions.Append(BigExplosion(x,y,velocity[0],velocity[1]))
+            Shooting.scene.explosions.Append(BigExplosion(x, y, velocity[0], velocity[1]))
         Shooting.scene.enemies.Remove(self)
         yield None
 
@@ -917,7 +942,7 @@ class BossEnemy(Enemy):
             if battery_enemy_exists == False and missile_enemy_exists == False:
                 yield None
 
-    def AddDamage(self,damage):
+    def AddDamage(self, damage):
         self.shield -= damage
         Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
@@ -937,10 +962,11 @@ class BossEnemy(Enemy):
             self.state = Enemy.DESTROY
             self.gen = self.Destroy()
 
-    def ToDamage(self,inc_velocity_x,inc_velocity_y):
+    def ToDamage(self, inc_velocity_x, inc_velocity_y):
         self.velocity_x += inc_velocity_x
         self.velocity_y += inc_velocity_y
         self.gen = self.Damage()
+
 
 class BossPartEnemy(Enemy):
     BOSS_PART_ENEMY = 0
@@ -948,7 +974,7 @@ class BossPartEnemy(Enemy):
     BOSS_MISSILE_ENEMY = 2
     BOSS_SPREADBULLET_ENEMY = 3
 
-    def __init__(self,x,y,parent):
+    def __init__(self, x, y, parent):
         Enemy.__init__(self)
         self.offset_x = x
         self.offset_y = y
@@ -985,7 +1011,7 @@ class BossPartEnemy(Enemy):
             self.y += self.velocity_y
             yield None
 
-    def AddDamage(self,damage):
+    def AddDamage(self, damage):
         self.shield -= damage
         Shooting.scene.status.AddScore(1)
         if self.shield <= 0:
@@ -1002,25 +1028,26 @@ class BossPartEnemy(Enemy):
                 Gss.data.explosion_sound.play()
             for i in range(16):
                 velocity = RandomEffectVector(Fixed(effect_rand.randrange(12)))
-                Shooting.scene.explosions.Append(Explosion(self.x,self.y,velocity[0],velocity[1]))
+                Shooting.scene.explosions.Append(Explosion(self.x, self.y, velocity[0], velocity[1]))
             if self.offset_y > 0:
                 inc_velocity_y = Fixed(-4)
             else:
                 inc_velocity_y = Fixed(4)
-            self.parent.ToDamage(0,inc_velocity_y)
+            self.parent.ToDamage(0, inc_velocity_y)
             self.parent.SplitChild(self)
             self.SplitFromBoss()
         if not Gss.settings.GetSilent():
             Gss.data.explosion_small_sound.play()
-        Shooting.scene.explosions.Append(Explosion(self.x,self.y,self.velocity_x,self.velocity_y))
+        Shooting.scene.explosions.Append(Explosion(self.x, self.y, self.velocity_x, self.velocity_y))
         Shooting.scene.enemies.Remove(self)
 
     def GetType(self):
         return self.type
 
+
 class BossBatteryEnemy(BossPartEnemy):
-    def __init__(self,x,y,parent):
-        BossPartEnemy.__init__(self,x,y,parent)
+    def __init__(self, x, y, parent):
+        BossPartEnemy.__init__(self, x, y, parent)
         self.type = BossPartEnemy.BOSS_BATTERY_ENEMY
         self.shield = 24
         self.gen = self.Idle()
@@ -1033,7 +1060,7 @@ class BossBatteryEnemy(BossPartEnemy):
         while True:
             for j in range(31):
                 yield None
-            Shooting.scene.bullets.Append(Bullet.FromAngle(self.x,self.y,self.Search(Shooting.scene.player),5))
+            Shooting.scene.bullets.Append(Bullet.FromAngle(self.x, self.y, self.Search(Shooting.scene.player), 5))
             yield None
 
     def Idle(self):
@@ -1046,9 +1073,10 @@ class BossBatteryEnemy(BossPartEnemy):
     def ToIdle(self):
         self.gen = self.Idle()
 
+
 class BossMissileEnemy(BossPartEnemy):
-    def __init__(self,x,y,parent):
-        BossPartEnemy.__init__(self,x,y,parent)
+    def __init__(self, x, y, parent):
+        BossPartEnemy.__init__(self, x, y, parent)
         self.type = BossPartEnemy.BOSS_MISSILE_ENEMY
         self.shield = 24
         self.gen = self.Idle()
@@ -1063,7 +1091,7 @@ class BossMissileEnemy(BossPartEnemy):
                 yield None
             if not Gss.settings.GetSilent():
                 Gss.data.missile_sound.play()
-            Shooting.scene.enemies.Append(Missile(self.x,self.y,Radian(180)))
+            Shooting.scene.enemies.Append(Missile(self.x, self.y, Radian(180)))
             yield None
 
     def Idle(self):
@@ -1076,9 +1104,10 @@ class BossMissileEnemy(BossPartEnemy):
     def ToIdle(self):
         self.gen = self.Idle()
 
+
 class BossSpreadBulletEnemy(BossPartEnemy):
-    def __init__(self,x,y,parent):
-        BossPartEnemy.__init__(self,x,y,parent)
+    def __init__(self, x, y, parent):
+        BossPartEnemy.__init__(self, x, y, parent)
         self.type = BossPartEnemy.BOSS_SPREADBULLET_ENEMY
         self.shield = 24
         self.gen = self.Idle()
@@ -1091,7 +1120,7 @@ class BossSpreadBulletEnemy(BossPartEnemy):
         while True:
             for j in range(63):
                 yield None
-            for bullet in Bullet.FromAngleSpread(self.x,self.y,self.Search(Shooting.scene.player),2,1,10):
+            for bullet in Bullet.FromAngleSpread(self.x, self.y, self.Search(Shooting.scene.player), 2, 1, 10):
                 Shooting.scene.bullets.Append(bullet)
             yield None
             for j in range(64):
@@ -1107,16 +1136,17 @@ class BossSpreadBulletEnemy(BossPartEnemy):
     def ToIdle(self):
         self.gen = self.Idle()
 
+
 class Missile(Enemy):
-    def __init__(self,x,y,angle):
+    def __init__(self, x, y, angle):
         Enemy.__init__(self)
         self.x = x
         self.y = y
         self.angle = angle
         self.velocity_x = 0
         self.velocity_y = 0
-        self.sprite = Sprite(Gss.data.missile_surface,-15,-15,32,32)
-        self.collision = Collision(Fixed(-2),Fixed(-2),Fixed(2),Fixed(2))
+        self.sprite = Sprite(Gss.data.missile_surface, -15, -15, 32, 32)
+        self.collision = Collision(Fixed(-2), Fixed(-2), Fixed(2), Fixed(2))
         self.gen = self.Move()
 
     def Process(self):
@@ -1156,19 +1186,20 @@ class Missile(Enemy):
             smoke_cnt += 1
             smoke_cnt &= 1
             if smoke_cnt == 0:
-                Shooting.scene.explosions.Append(Smoke(self.x + Fixed(cos_val * -10),self.y + Fixed(sin_val * -10),Fixed(cos_val * -5) + Fixed(effect_rand.randrange(256) - 128) / 256,Fixed(sin_val * -5) + Fixed(effect_rand.randrange(256) - 128) / 256))
+                Shooting.scene.explosions.Append(Smoke(self.x + Fixed(cos_val * -10), self.y + Fixed(sin_val * -10), Fixed(cos_val * -5) + Fixed(effect_rand.randrange(256) - 128) / 256, Fixed(sin_val * -5) + Fixed(effect_rand.randrange(256) - 128) / 256))
             yield None
 
+
 class Bullet(Actor):
-    def __init__(self,x,y,velocity_x,velocity_y):
+    def __init__(self, x, y, velocity_x, velocity_y):
         Actor.__init__(self)
         self.x = x
         self.y = y
         self.velocity_x = velocity_x
         self.velocity_y = velocity_y
         self.cnt = 0
-        self.sprite = Sprite(Gss.data.bullet_surface,-7,-7,16,16)
-        self.collision = PointCollision(Fixed(-16),Fixed(-16),Fixed(16),Fixed(16))
+        self.sprite = Sprite(Gss.data.bullet_surface, -7, -7, 16, 16)
+        self.collision = PointCollision(Fixed(-16), Fixed(-16), Fixed(16), Fixed(16))
 
     def Process(self):
         self.x += self.velocity_x
@@ -1179,39 +1210,41 @@ class Bullet(Actor):
         if self.CheckSceneOut() == True:
             Shooting.scene.bullets.Remove(self)
 
-    def FromAngle(cls,x,y,angle,speed):
-        return Bullet(x,y,Fixed(math.cos(angle) * speed),Fixed(math.sin(angle) * speed))
+    def FromAngle(cls, x, y, angle, speed):
+        return Bullet(x, y, Fixed(math.cos(angle) * speed), Fixed(math.sin(angle) * speed))
     FromAngle = classmethod(FromAngle)
 
-    def FromAngle3Way(cls,x,y,angle,angle2,speed):
-        return (Bullet(x,y,Fixed(math.cos(angle) * speed),Fixed(math.sin(angle) * speed)),
-                Bullet(x,y,Fixed(math.cos(angle + angle2) * speed),Fixed(math.sin(angle + angle2) * speed)),
-                Bullet(x,y,Fixed(math.cos(angle - angle2) * speed),Fixed(math.sin(angle - angle2) * speed)))
+    def FromAngle3Way(cls, x, y, angle, angle2, speed):
+        return (Bullet(x, y, Fixed(math.cos(angle) * speed), Fixed(math.sin(angle) * speed)),
+                Bullet(x, y, Fixed(math.cos(angle + angle2) * speed), Fixed(math.sin(angle + angle2) * speed)),
+                Bullet(x, y, Fixed(math.cos(angle - angle2) * speed), Fixed(math.sin(angle - angle2) * speed)))
     FromAngle3Way = classmethod(FromAngle3Way)
 
-    def FromAngleSpread(cls,x,y,angle,speed,power,num):
+    def FromAngleSpread(cls, x, y, angle, speed, power, num):
         bullets = []
         for i in range(num):
             offset_vector = RandomEnemyVector(enemy_rand.randrange(Fixed(power)))
             velocity_x = Fixed(math.cos(angle) * speed) + offset_vector[0]
             velocity_y = Fixed(math.sin(angle) * speed) + offset_vector[1]
-            bullets.append(Bullet(x,y,velocity_x,velocity_y))
+            bullets.append(Bullet(x, y, velocity_x, velocity_y))
         return bullets
     FromAngleSpread = classmethod(FromAngleSpread)
 
+
 class LongBullet(Bullet):
-    def __init__(self,x,y,velocity_x,velocity_y):
-        Bullet.__init__(self,x,y,velocity_x,velocity_y)
-        self.sprite = Sprite(Gss.data.longbullet_surface,-24,-16,48,32)
-        self.collision = Collision(Fixed(-24),Fixed(-16),Fixed(48),Fixed(32))
+    def __init__(self, x, y, velocity_x, velocity_y):
+        Bullet.__init__(self, x, y, velocity_x, velocity_y)
+        self.sprite = Sprite(Gss.data.longbullet_surface, -24, -16, 48, 32)
+        self.collision = Collision(Fixed(-24), Fixed(-16), Fixed(48), Fixed(32))
+
 
 class Explosion(Actor):
-    def __init__(self,x,y,velocity_x,velocity_y):
+    def __init__(self, x, y, velocity_x, velocity_y):
         Actor.__init__(self)
         self.x = x
         self.y = y
-        self.sprite = Sprite(Gss.data.explosion_surface,-16,-16,32,32)
-        self.collision = Collision(Fixed(-16),Fixed(-16),Fixed(16),Fixed(16))
+        self.sprite = Sprite(Gss.data.explosion_surface, -16, -16, 32, 32)
+        self.collision = Collision(Fixed(-16), Fixed(-16), Fixed(16), Fixed(16))
         self.velocity_x = velocity_x
         self.velocity_y = velocity_y
         self.cnt = 0
@@ -1224,57 +1257,62 @@ class Explosion(Actor):
         if self.cnt >= 32 or self.CheckSceneOut() == True:
             Shooting.scene.explosions.Remove(self)
 
+
 class Smoke(Explosion):
-    def __init__(self,x,y,velocity_x,velocity_y):
+    def __init__(self, x, y, velocity_x, velocity_y):
         Actor.__init__(self)
         self.x = x
         self.y = y
-        self.sprite = Sprite(Gss.data.smoke_surface,-16,-16,32,32)
-        self.collision = Collision(Fixed(-16),Fixed(-16),Fixed(16),Fixed(16))
+        self.sprite = Sprite(Gss.data.smoke_surface, -16, -16, 32, 32)
+        self.collision = Collision(Fixed(-16), Fixed(-16), Fixed(16), Fixed(16))
         self.velocity_x = velocity_x
         self.velocity_y = velocity_y
         self.cnt = 0
+
 
 class BigExplosion(Explosion):
-    def __init__(self,x,y,velocity_x,velocity_y):
+    def __init__(self, x, y, velocity_x, velocity_y):
         Actor.__init__(self)
         self.x = x
         self.y = y
-        self.sprite = Sprite(Gss.data.bigexplosion_surface,-64,-64,128,128)
-        self.collision = Collision(Fixed(-64),Fixed(-64),Fixed(64),Fixed(64))
+        self.sprite = Sprite(Gss.data.bigexplosion_surface, -64, -64, 128, 128)
+        self.collision = Collision(Fixed(-64), Fixed(-64), Fixed(64), Fixed(64))
         self.velocity_x = velocity_x
         self.velocity_y = velocity_y
         self.cnt = 0
+
 
 class PlayerExplosion(Explosion):
-    def __init__(self,x,y,velocity_x,velocity_y):
+    def __init__(self, x, y, velocity_x, velocity_y):
         Actor.__init__(self)
         self.x = x
         self.y = y
-        self.sprite = Sprite(Gss.data.playerexplosion_surface,-16,-16,32,32)
-        self.collision = Collision(Fixed(-16),Fixed(-16),Fixed(16),Fixed(16))
+        self.sprite = Sprite(Gss.data.playerexplosion_surface, -16, -16, 32, 32)
+        self.collision = Collision(Fixed(-16), Fixed(-16), Fixed(16), Fixed(16))
         self.velocity_x = velocity_x
         self.velocity_y = velocity_y
         self.cnt = 0
 
+
 class BulletExplosion(Explosion):
-    def __init__(self,x,y,velocity_x,velocity_y):
+    def __init__(self, x, y, velocity_x, velocity_y):
         Actor.__init__(self)
         self.x = x
         self.y = y
-        self.sprite = Sprite(Gss.data.bulletexplosion_surface,-16,-16,32,32)
-        self.collision = Collision(Fixed(-16),Fixed(-16),Fixed(16),Fixed(16))
+        self.sprite = Sprite(Gss.data.bulletexplosion_surface, -16, -16, 32, 32)
+        self.collision = Collision(Fixed(-16), Fixed(-16), Fixed(16), Fixed(16))
         self.velocity_x = velocity_x
         self.velocity_y = velocity_y
         self.cnt = 0
+
 
 class Star(Actor):
     def __init__(self):
         Actor.__init__(self)
         self.x = Fixed(effect_rand.randrange(SCREEN_WIDTH))
         self.y = Fixed(effect_rand.randrange(SCREEN_HEIGHT))
-        self.sprite = Sprite(Gss.data.star_surface,-32,-8,64,16)
-        self.collision = Collision(Fixed(-32),Fixed(-8),Fixed(32),Fixed(8))
+        self.sprite = Sprite(Gss.data.star_surface, -32, -8, 64, 16)
+        self.collision = Collision(Fixed(-32), Fixed(-8), Fixed(32), Fixed(8))
         self.velocity_x = 0
         self.velocity_y = 0
         self.speed = effect_rand.randrange(255) + 16
@@ -1288,6 +1326,7 @@ class Star(Actor):
             self.y = Fixed(effect_rand.randrange(SCREEN_HEIGHT))
             self.speed = effect_rand.randrange(255) + 16
 
+
 class Ending:
     def __init__(self):
         self.typewriterstring = None
@@ -1298,36 +1337,37 @@ class Ending:
             self.typewriterstring.Process()
         return self.gen.__next__()
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         if self.typewriterstring != None:
             self.typewriterstring.Draw(screen_surface)
 
     def Move(self):
-        self.typewriterstring = TypewriterString(176,180,"MISSION COMPLETED!")
+        self.typewriterstring = TypewriterString(176, 180, "MISSION COMPLETED!")
         for i in range(180):
             yield self
-        self.typewriterstring = TypewriterString(272,180,"BUT...")
+        self.typewriterstring = TypewriterString(272, 180, "BUT...")
         for i in range(180):
             yield self
         Shooting.scene.player.Suicide()
         yield None
 
+
 class FloatString:
-    def __init__(self,x,y,string):
+    def __init__(self, x, y, string):
         self.x = x - Fixed(8)
         self.y = y - Fixed(8)
         self.string = string
         self.scale = Fixed(0)
-        self.len  = len(self.string)
+        self.len = len(self.string)
         self.gen = self.Move()
 
     def Process(self):
         return self.gen.__next__()
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         x = self.x - self.scale * self.len / 2
         for character in self.string:
-            Gss.data.font.Draw(character,screen_surface,ScreenInt(x),ScreenInt(self.y))
+            Gss.data.font.Draw(character, screen_surface, ScreenInt(x), ScreenInt(self.y))
             x += self.scale
 
     def Move(self):
@@ -1344,8 +1384,9 @@ class FloatString:
             yield self
         yield None
 
+
 class TypewriterString:
-    def __init__(self,x,y,string):
+    def __init__(self, x, y, string):
         self.x = x
         self.y = y
         self.string = string
@@ -1357,14 +1398,14 @@ class TypewriterString:
     def Process(self):
         return self.gen.__next__()
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         x = self.x
         for i in range(self.num_draw):
             character = self.string[i]
-            Gss.data.font.Draw(character,screen_surface,x,self.y)
+            Gss.data.font.Draw(character, screen_surface, x, self.y)
             x += 16
         if self.cursor_exists == True:
-            Gss.data.font.Draw("+",screen_surface,x,self.y)
+            Gss.data.font.Draw("+", screen_surface, x, self.y)
 
     def Move(self):
         for i in range(self.len):
@@ -1381,6 +1422,7 @@ class TypewriterString:
         while True:
             yield True
 
+
 class GameOverString:
     STATE_APPEAR = 0
     STATE_APPEARED = 1
@@ -1396,14 +1438,14 @@ class GameOverString:
     def Process(self):
         return self.gen.__next__()
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         for i in range(9):
             cos_val = math.cos(self.angle)
             sin_val = math.sin(self.angle)
             x = int((((i - 4) * 32) * self.scale * cos_val) / 15 - 16 + 320)
             y = int((((i - 4) * 32) * self.scale * sin_val) / 15 - 16 + 240)
-            rect = (i * 32,0,32,32)
-            screen_surface.blit(Gss.data.gameoverstring_surface,(x,y),rect)
+            rect = (i * 32, 0, 32, 32)
+            screen_surface.blit(Gss.data.gameoverstring_surface, (x, y), rect)
 
     def GetState(self):
         return self.state
@@ -1429,17 +1471,18 @@ class GameOverString:
         while True:
             yield self
 
+
 class TypewriterText:
-    def __init__(self,strings):
+    def __init__(self, strings):
         self.strings = strings
         self.len = len(self.strings)
-        self.num_draw = 0;
+        self.num_draw = 0
         self.gen = self.Move()
 
     def Process(self):
         return self.gen.__next__()
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         for i in range(self.num_draw + 1):
             self.strings[i].Draw(screen_surface)
 
@@ -1450,8 +1493,9 @@ class TypewriterText:
                     self.num_draw += 1
             yield None
 
+
 class ActorList:
-    def __init__(self,num_actor):
+    def __init__(self, num_actor):
         self.num_actor = num_actor
         self.actors = [None] * num_actor
 
@@ -1460,14 +1504,14 @@ class ActorList:
             if actor != None:
                 yield actor
 
-    def Append(self,actor):
+    def Append(self, actor):
         for i in range(self.num_actor):
             if self.actors[i] == None:
                 self.actors[i] = actor
                 return True
         return False
 
-    def Remove(self,actor):
+    def Remove(self, actor):
         for i in range(self.num_actor):
             if self.actors[i] is actor:
                 self.actors[i] = None
@@ -1481,21 +1525,23 @@ class ActorList:
                 num_existing += 1
         return num_existing
 
+
 class Font:
     def __init__(self):
         surface = pygame.image.load("font.bmp")
         surface.set_colorkey(0)
         self.surface = surface.convert()
 
-    def Draw(self,character,screen_surface,x,y):
+    def Draw(self, character, screen_surface, x, y):
         code = ord(character)
-        screen_surface.blit(self.surface,(x,y),((code & 15) * 16,(code // 16) * 16,16,16))
+        screen_surface.blit(self.surface, (x, y), ((code & 15) * 16, (code // 16) * 16, 16, 16))
 
-    def DrawString(self,string,screen_surface,x,y):
+    def DrawString(self, string, screen_surface, x, y):
         for character in string:
             code = ord(character)
-            screen_surface.blit(self.surface,(x,y),((code & 15) * 16,(code // 16) * 16,16,16))
+            screen_surface.blit(self.surface, (x, y), ((code & 15) * 16, (code // 16) * 16, 16, 16))
             x += 16
+
 
 class Data:
     def __init__(self):
@@ -1539,6 +1585,7 @@ class Data:
         self.missile_sound = pygame.mixer.Sound("missile.wav")
         self.beam_sound = pygame.mixer.Sound("beam.wav")
 
+
 class Status:
     destruction_scale = 0.0
     frame_scale = 0.0
@@ -1564,14 +1611,14 @@ class Status:
     def IncrementFrameNum(self):
         self.frame_num += 1
 
-    def UpdateMultiplier(self,live_cnt):
+    def UpdateMultiplier(self, live_cnt):
         if live_cnt > 30:
             self.multiplier += (live_cnt - 30) / 32
 
     def ResetMultilier(self):
         self.multiplier = 1
 
-    def AddScore(self,base_score):
+    def AddScore(self, base_score):
         self.score += base_score
 
     def AddSuicideScore(self):
@@ -1579,7 +1626,7 @@ class Status:
         self.score += score
         return score
 
-    def DecrementPlayerStock(self,num):
+    def DecrementPlayerStock(self, num):
         self.player_stock -= num
         if self.player_stock < 0:
             self.player_stock = 0
@@ -1593,7 +1640,7 @@ class Status:
         self.frame_count += 1
         return ScreenInt(self.event_count) - ScreenInt(previous_event_count)
 
-    def AddEventSpeed(self,velocity):
+    def AddEventSpeed(self, velocity):
         self.event_speed += velocity
         if self.event_speed < Fixed(0.5):
             self.event_speed = Fixed(0.5)
@@ -1620,7 +1667,7 @@ class Status:
     def GetCompleted(self):
         return self.completed
 
-    def UpdatePenalty(self,penalty):
+    def UpdatePenalty(self, penalty):
         if self.penalty > penalty:
             self.penalty = penalty
 
@@ -1630,11 +1677,11 @@ class Status:
         Status.event_scale = contestant_rand.random()
     UpdateScales = classmethod(UpdateScales)
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         lap_time_min = self.lap_time / (60 * 60)
         lap_time_sec = (self.lap_time / 60) % 60
         lap_time_under_sec = (self.lap_time % 60) * 100 / 60 + 1
-        Gss.data.font.DrawString("SCORE:   %010d  SPEED:         %03d%%" % (self.score,ScreenInt(self.event_speed * 100)),screen_surface,0,0)
+        Gss.data.font.DrawString("SCORE:   %010d  SPEED:         %03d%%" % (self.score, ScreenInt(self.event_speed * 100)), screen_surface, 0, 0)
         display_player_stock = self.player_stock - 1
         if display_player_stock < 0:
             display_player_stock = 0
@@ -1643,7 +1690,8 @@ class Status:
             fps = (self.frame_num * 1000) / ticks
         else:
             fps = 99
-        Gss.data.font.DrawString("PLAYER STOCK:     %1d  FRAME RATE:     %03d" % (display_player_stock,fps),screen_surface,0,16)
+        Gss.data.font.DrawString("PLAYER STOCK:     %1d  FRAME RATE:     %03d" % (display_player_stock, fps), screen_surface, 0, 16)
+
 
 class Scene:
     BEAM_NUM = 5
@@ -1686,8 +1734,9 @@ class Scene:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
 
+
 class EventParser:
-    def __init__(self,events):
+    def __init__(self, events):
         self.events = events
         self.gen = self.ParseEvents()
 
@@ -1707,20 +1756,20 @@ class EventParser:
         while True:
             yield None
 
-    def AppendEnemy(cls,args):
+    def AppendEnemy(cls, args):
         Shooting.scene.enemies.Append(args[0](*args[1]))
         return 0
     AppendEnemy = classmethod(AppendEnemy)
 
-    def Idle(cls,frame_num):
+    def Idle(cls, frame_num):
         return frame_num
     Idle = classmethod(Idle)
 
-    def WaitEnemyDestroyed(cls,dummy):
+    def WaitEnemyDestroyed(cls, dummy):
         return EventParser.EnemyDestroyed
     WaitEnemyDestroyed = classmethod(WaitEnemyDestroyed)
 
-    def BeginEnding(cls,dummy):
+    def BeginEnding(cls, dummy):
         Shooting.scene.ending = Ending()
         Shooting.scene.status.SetCompleted()
         return 0
@@ -1732,6 +1781,7 @@ class EventParser:
         else:
             return False
     EnemyDestroyed = classmethod(EnemyDestroyed)
+
 
 class Joystick:
     UP = 1
@@ -1792,99 +1842,101 @@ class Joystick:
     def GetTrigger(self):
         return self.trigger
 
+
 class NeuralNetwork:
     INPUT_COUNT = 28
     OUTPUT_COUNT = 4
     GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
 
     def __init__(self):
-        self.w1 = np.zeros((18,NeuralNetwork.INPUT_COUNT))
-        self.b1 = np.zeros((18,1))
-        self.w2 = np.zeros((18,18))
-        self.b2 = np.zeros((18,1))
-        self.w3 = np.zeros((18,18))
-        self.b3 = np.zeros((18,1))
-        self.w4 = np.zeros((18,18))
-        self.b4 = np.zeros((18,1))
-        self.w5 = np.zeros((NeuralNetwork.OUTPUT_COUNT,18))
-        self.b5 = np.zeros((NeuralNetwork.OUTPUT_COUNT,1))
+        self.w1 = np.zeros((18, NeuralNetwork.INPUT_COUNT))
+        self.b1 = np.zeros((18, 1))
+        self.w2 = np.zeros((18, 18))
+        self.b2 = np.zeros((18, 1))
+        self.w3 = np.zeros((18, 18))
+        self.b3 = np.zeros((18, 1))
+        self.w4 = np.zeros((18, 18))
+        self.b4 = np.zeros((18, 1))
+        self.w5 = np.zeros((NeuralNetwork.OUTPUT_COUNT, 18))
+        self.b5 = np.zeros((NeuralNetwork.OUTPUT_COUNT, 1))
 
-    def Load(self,genes):
+    def Load(self, genes):
         index = 0
         shape = self.w1.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.w1[i,j] = genes[index]
+                self.w1[i, j] = genes[index]
                 index += 1
         shape = self.b1.shape
         for i in range(shape[0]):
-            self.b1[i,0] = genes[index]
+            self.b1[i, 0] = genes[index]
             index += 1
         shape = self.w2.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.w2[i,j] = genes[index]
+                self.w2[i, j] = genes[index]
                 index += 1
         shape = self.b2.shape
         for i in range(shape[0]):
-            self.b2[i,0] = genes[index]
+            self.b2[i, 0] = genes[index]
             index += 1
         shape = self.w3.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.w3[i,j] = genes[index]
+                self.w3[i, j] = genes[index]
                 index += 1
         shape = self.b3.shape
         for i in range(shape[0]):
-            self.b3[i,0] = genes[index]
+            self.b3[i, 0] = genes[index]
             index += 1
         shape = self.w4.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.w4[i,j] = genes[index]
+                self.w4[i, j] = genes[index]
                 index += 1
         shape = self.b4.shape
         for i in range(shape[0]):
-            self.b4[i,0] = genes[index]
+            self.b4[i, 0] = genes[index]
             index += 1
         shape = self.w5.shape
         for i in range(shape[0]):
             for j in range(shape[1]):
-                self.w5[i,j] = genes[index]
+                self.w5[i, j] = genes[index]
                 index += 1
         shape = self.b5.shape
         for i in range(shape[0]):
-            self.b5[i,0] = genes[index]
+            self.b5[i, 0] = genes[index]
             index += 1
 
-    def Infer(self,values):
-        input = np.array(values).reshape((NeuralNetwork.INPUT_COUNT,1))
+    def Infer(self, values):
+        input = np.array(values).reshape((NeuralNetwork.INPUT_COUNT, 1))
         # print("input: {}".format(input))
-        a_value = np.dot(self.w1,input)
-        a_value = np.add(a_value,self.b1)
-        a_value = np.maximum(a_value,0.0)
+        a_value = np.dot(self.w1, input)
+        a_value = np.add(a_value, self.b1)
+        a_value = np.maximum(a_value, 0.0)
         # print("a_value: {}".format(a_value))
-        b_value = np.dot(self.w2,a_value)
-        b_value = np.add(b_value,self.b2)
-        b_value = np.maximum(b_value,0.0)
+        b_value = np.dot(self.w2, a_value)
+        b_value = np.add(b_value, self.b2)
+        b_value = np.maximum(b_value, 0.0)
         # print("b_value: {}".format(b_value))
-        c_value = np.dot(self.w3,b_value)
-        c_value = np.add(c_value,self.b3)
-        c_value = np.maximum(c_value,0.0)
+        c_value = np.dot(self.w3, b_value)
+        c_value = np.add(c_value, self.b3)
+        c_value = np.maximum(c_value, 0.0)
         # print("c_value: {}".format(c_value))
-        d_value = np.dot(self.w4,c_value)
-        d_value = np.add(d_value,self.b4)
-        d_value = np.maximum(d_value,0.0)
+        d_value = np.dot(self.w4, c_value)
+        d_value = np.add(d_value, self.b4)
+        d_value = np.maximum(d_value, 0.0)
         # print("d_value: {}".format(d_value))
-        output = np.dot(self.w5,d_value)
-        output = np.add(output,self.b5)
+        output = np.dot(self.w5, d_value)
+        output = np.add(output, self.b5)
         # print("output: {}".format(output))
         return output.reshape((NeuralNetwork.OUTPUT_COUNT,)).tolist()
+
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
 
-    def __init__(self,shooting,genes):
+    def __init__(self, shooting, genes):
         super().__init__()
         self.position = -1
         self.shooting = shooting
@@ -1900,9 +1952,9 @@ class EmulatedJoystick(Joystick):
         explosions = self.shooting.scene.explosions
         values = [0.0] * NeuralNetwork.INPUT_COUNT
         for bullet in bullets:
-            delta = ((bullet.x - player.x) / 16384.0,(bullet.y - player.y) / 16384.0)
+            delta = ((bullet.x - player.x) / 16384.0, (bullet.y - player.y) / 16384.0)
             distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
-            angle = math.atan2(delta[1],delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
+            angle = math.atan2(delta[1], delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
             index = int(angle / 45.0) % 8
             value = 0.0
             if distance < 100.0:
@@ -1910,9 +1962,9 @@ class EmulatedJoystick(Joystick):
             if values[index] < value:
                 values[index] = value
         for enemy in enemies:
-            delta = ((enemy.x - player.x) / 16384.0,(enemy.y - player.y) / 16384.0)
+            delta = ((enemy.x - player.x) / 16384.0, (enemy.y - player.y) / 16384.0)
             distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
-            angle = math.atan2(delta[1],delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
+            angle = math.atan2(delta[1], delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
             index = int(angle / 45.0) % 8
             value = 0.0
             if distance < 100.0:
@@ -1935,9 +1987,9 @@ class EmulatedJoystick(Joystick):
                     values[index + 12] = value
         for explosion in explosions:
             if type(explosion) == BulletExplosion:
-                delta = ((explosion.x - player.x) / 16384.0,(explosion.y - player.y) / 16384.0)
+                delta = ((explosion.x - player.x) / 16384.0, (explosion.y - player.y) / 16384.0)
                 distance = math.sqrt(delta[0] * delta[0] + delta[1] * delta[1])
-                angle = math.atan2(delta[1],delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
+                angle = math.atan2(delta[1], delta[0]) / (2.0 * math.pi) * 360.0 + 22.5
                 if angle < 0.0:
                     index = int(angle / -15.0)
                     value = distance / 100.0
@@ -2004,6 +2056,7 @@ class EmulatedJoystick(Joystick):
     def GetTrigger(self):
         return self.trigger
 
+
 class Contestant:
     ALPHA = 0.2
     MUTATION_RATE = 0.5
@@ -2026,7 +2079,7 @@ class Contestant:
         contestant.event_score = self.event_score
         return contestant
 
-    def Cross(self,contestant):
+    def Cross(self, contestant):
         for i in range(len(self.genes)):
             if contestant_rand.random() <= Contestant.MUTATION_RATE * 0.01:
                 self.genes[i] = contestant_rand.random() * 2.0 - 1.0
@@ -2036,7 +2089,7 @@ class Contestant:
                 self.genes[i] = contestant.genes[i]
                 contestant.genes[i] = value
 
-    def CrossWithBCXAlpha(self,contestant):
+    def CrossWithBCXAlpha(self, contestant):
         for i in range(len(self.genes)):
             if contestant_rand.random() <= Contestant.MUTATION_RATE * 0.01:
                 self.genes[i] = contestant_rand.random() * 2.0 - 1.0
@@ -2057,48 +2110,48 @@ class Contestant:
     def GetScore(self):
         return self.score
 
-    def SetScore(self,score):
+    def SetScore(self, score):
         self.score = score
 
     def GetDestructionScore(self):
         return self.destruction_score
 
-    def SetDestructionScore(self,destruction_score):
+    def SetDestructionScore(self, destruction_score):
         self.destruction_score = destruction_score
 
     def GetFrameScore(self):
         return self.frame_score
 
-    def SetFrameScore(self,frame_score):
+    def SetFrameScore(self, frame_score):
         self.frame_score = frame_score
 
     def GetEventScore(self):
         return self.event_score
 
-    def SetEventScore(self,event_score):
+    def SetEventScore(self, event_score):
         self.event_score = event_score
 
-    def GetAlternated(cls,contestants):
+    def GetAlternated(cls, contestants):
         elites = []
         scores = []
         for contestant in contestants:
             score = contestant.GetScore()
             scores.append(score)
-        sorted_scores = sorted(scores,reverse=True)
+        sorted_scores = sorted(scores, reverse=True)
         new_contestants = []
         for i in range(2):
-            contestant = Contestant.GetFromScore(contestants,sorted_scores[i])
+            contestant = Contestant.GetFromScore(contestants, sorted_scores[i])
             elites.append(contestant)
             new_contestants.append(contestant)
         for i in range(4):
             score = sorted_scores[i + 2]
             for j in range(2):
                 elite = elites[j].Clone()
-                contestant = Contestant.GetFromScore(contestants,score).Clone()
+                contestant = Contestant.GetFromScore(contestants, score).Clone()
                 contestant.Cross(elite)
                 new_contestants.append(contestant)
                 elite = elites[j].Clone()
-                contestant = Contestant.GetFromScore(contestants,score).Clone()
+                contestant = Contestant.GetFromScore(contestants, score).Clone()
                 contestant.CrossWithBCXAlpha(elite)
                 new_contestants.append(contestant)
         a_index = contestant_rand.randrange(len(contestants))
@@ -2114,24 +2167,25 @@ class Contestant:
         return new_contestants
     GetAlternated = classmethod(GetAlternated)
 
-    def Load(cls,filename):
-        with open(filename,"rb") as file:
+    def Load(cls, filename):
+        with open(filename, "rb") as file:
             saved = pickle.load(file)
-        return saved["contestants"],saved["generation"]
+        return saved["contestants"], saved["generation"]
     Load = classmethod(Load)
 
-    def Save(cls,contestants,generation,filename):
-        saving = {"generation":generation,"contestants":contestants}
-        with open(filename,"wb") as file:
-            pickle.dump(saving,file)
+    def Save(cls, contestants, generation, filename):
+        saving = {"generation": generation, "contestants": contestants}
+        with open(filename, "wb") as file:
+            pickle.dump(saving, file)
     Save = classmethod(Save)
 
-    def GetFromScore(cls,contestants,score):
+    def GetFromScore(cls, contestants, score):
         for contestant in contestants:
             if contestant.GetScore() == score:
                 return contestant
         return None
     GetFromScore = classmethod(GetFromScore)
+
 
 class Gss:
     screen_surface = None
@@ -2140,9 +2194,9 @@ class Gss:
     settings = None
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-    def __init__(self,contestants,generation,settings):
+    def __init__(self, contestants, generation, settings):
         pygame.init()
-        Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT),pygame.HWSURFACE | pygame.DOUBLEBUF)# | pygame.FULLSCREEN)
+        Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         pygame.mouse.set_visible(1)
         pygame.mixer.init()
         pygame.joystick.init()
@@ -2167,7 +2221,7 @@ class Gss:
             enemy_rand.seed(123)
             effect_rand.seed(456)
             shooting = Shooting()
-            Gss.joystick = EmulatedJoystick(shooting,self.contestants[self.contestant_index].GetGenes())
+            Gss.joystick = EmulatedJoystick(shooting, self.contestants[self.contestant_index].GetGenes())
             shooting.MainLoop()
             score = shooting.scene.status.contestant_score
             self.contestants[self.contestant_index].SetScore(score)
@@ -2177,19 +2231,20 @@ class Gss:
             self.contestants[self.contestant_index].SetFrameScore(frame_score)
             event_score = shooting.scene.status.contestant_event_score
             self.contestants[self.contestant_index].SetEventScore(event_score)
-            print("Generation: {}, Contestant: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation,self.contestant_index,score,destruction_score,frame_score,event_score))
+            print("Generation: {}, Contestant: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, self.contestant_index, score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             self.contestant_index += 1
             if self.contestant_index >= 20:
                 self.contestants = Contestant.GetAlternated(self.contestants)
                 self.generation += 1
-                Contestant.Save(self.contestants,self.generation,"gen{}.pickle".format(self.generation))
+                Contestant.Save(self.contestants, self.generation, "gen{}.pickle".format(self.generation))
                 self.contestant_index = 0
                 if (self.generation % 10) == 0:
                     Status.UpdateScales()
 
+
 class LogoPart(Actor):
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         Actor.__init__(self)
         self.x = x
         self.y = y
@@ -2198,56 +2253,58 @@ class LogoPart(Actor):
         self.offset_x = offset_x
         self.offset_y = offset_y
         self.distance = math.sqrt(offset_x * offset_x + offset_y * offset_y)
-        self.sprite = Sprite(Gss.data.enemy_surface,-16,-16,32,32)
+        self.sprite = Sprite(Gss.data.enemy_surface, -16, -16, 32, 32)
 
-    def Process(self,scale_param):
+    def Process(self, scale_param):
         index = int(self.distance / 65536.0) & 255
         self.x = (self.offset_x * scale_param[index]) / FIXED_MUL + Fixed(320)
         self.y = (self.offset_y * scale_param[index]) / FIXED_MUL + Fixed(168)
 
+
 logo_part_positions = (
-    (Fixed(160),Fixed(96)),
-    (Fixed(192),Fixed(96)),
-    (Fixed(224),Fixed(96)),
-    (Fixed(160),Fixed(128)),
-    (Fixed(160),Fixed(160)),
-    (Fixed(224),Fixed(160)),
-    (Fixed(160),Fixed(192)),
-    (Fixed(224),Fixed(192)),
-    (Fixed(160),Fixed(224)),
-    (Fixed(192),Fixed(224)),
-    (Fixed(224),Fixed(224)),
+    (Fixed(160), Fixed(96)),
+    (Fixed(192), Fixed(96)),
+    (Fixed(224), Fixed(96)),
+    (Fixed(160), Fixed(128)),
+    (Fixed(160), Fixed(160)),
+    (Fixed(224), Fixed(160)),
+    (Fixed(160), Fixed(192)),
+    (Fixed(224), Fixed(192)),
+    (Fixed(160), Fixed(224)),
+    (Fixed(192), Fixed(224)),
+    (Fixed(224), Fixed(224)),
 
-    (Fixed(288),Fixed(96)),
-    (Fixed(320),Fixed(96)),
-    (Fixed(352),Fixed(96)),
-    (Fixed(288),Fixed(128)),
-    (Fixed(288),Fixed(160)),
-    (Fixed(320),Fixed(160)),
-    (Fixed(352),Fixed(160)),
-    (Fixed(352),Fixed(192)),
-    (Fixed(288),Fixed(224)),
-    (Fixed(320),Fixed(224)),
-    (Fixed(352),Fixed(224)),
+    (Fixed(288), Fixed(96)),
+    (Fixed(320), Fixed(96)),
+    (Fixed(352), Fixed(96)),
+    (Fixed(288), Fixed(128)),
+    (Fixed(288), Fixed(160)),
+    (Fixed(320), Fixed(160)),
+    (Fixed(352), Fixed(160)),
+    (Fixed(352), Fixed(192)),
+    (Fixed(288), Fixed(224)),
+    (Fixed(320), Fixed(224)),
+    (Fixed(352), Fixed(224)),
 
-    (Fixed(416),Fixed(96)),
-    (Fixed(448),Fixed(96)),
-    (Fixed(480),Fixed(96)),
-    (Fixed(416),Fixed(128)),
-    (Fixed(416),Fixed(160)),
-    (Fixed(448),Fixed(160)),
-    (Fixed(480),Fixed(160)),
-    (Fixed(480),Fixed(192)),
-    (Fixed(416),Fixed(224)),
-    (Fixed(448),Fixed(224)),
-    (Fixed(480),Fixed(224)),
+    (Fixed(416), Fixed(96)),
+    (Fixed(448), Fixed(96)),
+    (Fixed(480), Fixed(96)),
+    (Fixed(416), Fixed(128)),
+    (Fixed(416), Fixed(160)),
+    (Fixed(448), Fixed(160)),
+    (Fixed(480), Fixed(160)),
+    (Fixed(480), Fixed(192)),
+    (Fixed(416), Fixed(224)),
+    (Fixed(448), Fixed(224)),
+    (Fixed(480), Fixed(224)),
 )
+
 
 class Logo:
     def __init__(self):
         self.parts = []
         for position in logo_part_positions:
-            self.parts.append(LogoPart(position[0],position[1]))
+            self.parts.append(LogoPart(position[0], position[1]))
         self.scale_param = [Fixed(0.0)] * 256
         self.base_scale = 0.0
         self.wave_scale = 1.0
@@ -2260,7 +2317,7 @@ class Logo:
         for part in self.parts:
             part.Process(self.scale_param)
 
-    def Draw(self,screen_surface):
+    def Draw(self, screen_surface):
         for part in self.parts:
             part.Draw(screen_surface)
 
@@ -2289,6 +2346,7 @@ class Logo:
     def ToDisappear(self):
         self.gen = self.Disappear()
 
+
 class Title:
     STATE_CONTINUE = 0
     STATE_EXIT_QUIT = 1
@@ -2296,7 +2354,8 @@ class Title:
 
     def __init__(self):
         self.logo = Logo()
-        self.typewritertext = TypewriterText((TypewriterString(216,256,"VERSION %s" % VERSION),TypewriterString(160,384,"(C)2005 - 2020 GONY."),TypewriterString(136,416,"DEDICATED TO KENYA ABE."),TypewriterString(272,48,"SHIPPU"),TypewriterString(464,240,"NN"),TypewriterString(224,320,"PRESS BUTTON")))
+        self.typewritertext = TypewriterText((TypewriterString(216, 256, "VERSION %s" % VERSION), TypewriterString(160, 384, "(C)2005 - 2020 GONY."), TypewriterString(136, 416,
+                                                                                                                                                                       "DEDICATED TO KENYA ABE."), TypewriterString(272, 48, "SHIPPU"), TypewriterString(464, 240, "NN"), TypewriterString(224, 320, "PRESS BUTTON")))
         self.gen = self.Move()
 
     def MainLoop(self):
@@ -2307,7 +2366,7 @@ class Title:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         state = Title.STATE_EXIT_QUIT
-            Gss.screen_surface.fill((0,0,0))
+            Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             self.typewritertext.Process()
             self.logo.Process()
@@ -2318,7 +2377,7 @@ class Title:
             lap_time_min = Gss.best_lap_time / (60 * 60)
             lap_time_sec = (Gss.best_lap_time / 60) % 60
             lap_time_under_sec = (Gss.best_lap_time % 60) * 100 / 60 + 1
-            Gss.data.font.DrawString("BEST LAP: %02d'%02d''%02d" % (lap_time_min,lap_time_sec,lap_time_under_sec),Gss.screen_surface,0,0)
+            Gss.data.font.DrawString("BEST LAP: %02d'%02d''%02d" % (lap_time_min, lap_time_sec, lap_time_under_sec), Gss.screen_surface, 0, 0)
             pygame.display.flip()
             ticks = pygame.time.get_ticks() - begin_ticks
             frame_time = 16
@@ -2348,416 +2407,417 @@ class Title:
         while True:
             yield True
 
+
 test_events = (
-    (EventParser.Idle,60),
+    (EventParser.Idle, 60),
 
     # イントロ
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(80)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(16)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(400)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(280)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(320)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(80)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(16)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(400)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(280)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(320)))),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(80)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(16)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(400)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(280)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(320)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(80)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(16)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(400)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(280)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(320)))),
 
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,30),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 30),
 
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(40),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(140),Fixed(-0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(240),Fixed(0.1)))),
-    (EventParser.AppendEnemy,(MiddleMissileEnemy,(Fixed(640 + 63),Fixed(350)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(20)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(150)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(100)))),
-    (EventParser.Idle,180),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(40), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(140), Fixed(-0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(240), Fixed(0.1)))),
+    (EventParser.AppendEnemy, (MiddleMissileEnemy, (Fixed(640 + 63), Fixed(350)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(20)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(150)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(100)))),
+    (EventParser.Idle, 180),
 
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(420)))),
-    (EventParser.Idle,120),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(420)))),
+    (EventParser.Idle, 120),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
 
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(10)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(40)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(20)))),
-    (EventParser.Idle,60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(10)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(40)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(20)))),
+    (EventParser.Idle, 60),
 
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,30),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 30),
 
     # 約30秒
-    (EventParser.Idle,60),
+    (EventParser.Idle, 60),
 
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(40),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(320),Fixed(-0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(240),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(80),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(440),Fixed(-0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(160),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(360),Fixed(-0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(120),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(MiddleEnemy,(Fixed(640 + 63),Fixed(240)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(10)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(470)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(10)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(470)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(10)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(470)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(10)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(BackwordEnemy,(Fixed(0),Fixed(470)))),
-    (EventParser.Idle,60),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(40), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(320), Fixed(-0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(240), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(80), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(440), Fixed(-0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(160), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(360), Fixed(-0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(120), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (MiddleEnemy, (Fixed(640 + 63), Fixed(240)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(10)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(470)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(10)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(470)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(10)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(470)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(10)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (BackwordEnemy, (Fixed(0), Fixed(470)))),
+    (EventParser.Idle, 60),
 
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(80)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(160)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,60),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(80)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(160)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 60),
 
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(0)))),
-    (EventParser.Idle,220),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(RollEnemy,(Fixed(640),Fixed(480)))),
-    (EventParser.Idle,180),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(0)))),
+    (EventParser.Idle, 220),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (RollEnemy, (Fixed(640), Fixed(480)))),
+    (EventParser.Idle, 180),
 
     # 約1分20秒
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(140)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(140)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 10),
 
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(80)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(160)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(160)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(320)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(280)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(160)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.AppendEnemy,(MiddleMissileEnemy,(Fixed(640 + 63),Fixed(120)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightBulletEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(MiddleMissileEnemy,(Fixed(640 + 63),Fixed(360)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(240),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(120),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(0),Fixed(0.1)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(240),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(120),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(0),Fixed(0.1)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(240),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(120),Fixed(0.1)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(StayEnemy,(Fixed(640),Fixed(0),Fixed(0.1)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(MiddleEnemy,(Fixed(640 + 63),Fixed(120)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,10),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,60),
-    (EventParser.AppendEnemy,(MiddleEnemy,(Fixed(640 + 63),Fixed(360)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,90),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,30),
-    (EventParser.AppendEnemy,(VerticalMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,90),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(80)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(160)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(160)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(320)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(280)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(160)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.AppendEnemy, (MiddleMissileEnemy, (Fixed(640 + 63), Fixed(120)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightBulletEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (MiddleMissileEnemy, (Fixed(640 + 63), Fixed(360)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(240), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(120), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(0), Fixed(0.1)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(240), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(120), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(0), Fixed(0.1)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(240), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(120), Fixed(0.1)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (StayEnemy, (Fixed(640), Fixed(0), Fixed(0.1)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (MiddleEnemy, (Fixed(640 + 63), Fixed(120)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 10),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 60),
+    (EventParser.AppendEnemy, (MiddleEnemy, (Fixed(640 + 63), Fixed(360)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 90),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 30),
+    (EventParser.AppendEnemy, (VerticalMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 90),
 
     # 約1分50秒
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(80)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(40)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(160)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(25)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(170)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(340)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(420)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(240)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(460)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(70)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(410)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(90)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(200)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(60)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(210)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(120)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(20)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(50)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(110)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(230)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(470)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(380)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(190)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(430)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(270)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(470)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(440)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(290)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(420)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(360)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(230)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(330)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(140)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(410)))),
-    (EventParser.Idle,15),
-    (EventParser.AppendEnemy,(StraightMissileEnemy,(Fixed(640),Fixed(170)))),
-    (EventParser.Idle,240),
-    (EventParser.AppendEnemy,(BossEnemy,(Fixed(600),Fixed(768)))),
-    (EventParser.WaitEnemyDestroyed,None),
-    (EventParser.Idle,60),
-    (EventParser.BeginEnding,None),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(80)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(40)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(160)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(25)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(170)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(340)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(420)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(240)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(460)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(70)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(410)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(90)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(200)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(60)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(210)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(120)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(20)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(50)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(110)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(230)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(470)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(380)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(190)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(430)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(270)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(470)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(440)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(290)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(420)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(360)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(230)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(330)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(140)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(410)))),
+    (EventParser.Idle, 15),
+    (EventParser.AppendEnemy, (StraightMissileEnemy, (Fixed(640), Fixed(170)))),
+    (EventParser.Idle, 240),
+    (EventParser.AppendEnemy, (BossEnemy, (Fixed(600), Fixed(768)))),
+    (EventParser.WaitEnemyDestroyed, None),
+    (EventParser.Idle, 60),
+    (EventParser.BeginEnding, None),
 )
 
 """
@@ -2767,6 +2827,7 @@ test_events = (
     (EventParser.BeginEnding,None),
 )
 """
+
 
 class Shooting:
     STATE_CONTINUE = 0
@@ -2792,7 +2853,7 @@ class Shooting:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         state = Shooting.STATE_EXIT_QUIT
-            Gss.screen_surface.fill((0,0,0))
+            Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             Shooting.scene.player.Process()
             for beam in Shooting.scene.beams:
@@ -2871,6 +2932,7 @@ class Shooting:
         while True:
             yield True
 
+
 if __name__ == "__main__":
     contestants = None
     generation = 0
@@ -2884,5 +2946,5 @@ if __name__ == "__main__":
                     elif character == "s":
                         settings.SetSilent(True)
             else:
-                contestants,generation = Contestant.Load(argument[1])
-    Gss(contestants,generation,settings).Main()
+                contestants, generation = Contestant.Load(argument[1])
+    Gss(contestants, generation, settings).Main()
