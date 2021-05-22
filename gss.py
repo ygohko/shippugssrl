@@ -2366,6 +2366,8 @@ class Title:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         state = Title.STATE_EXIT_QUIT
+                    if event.key == pygame.K_c:
+                        Gss.settings.SetNoWait(not Gss.settings.GetNoWait())
             Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             self.typewritertext.Process()
@@ -2853,6 +2855,8 @@ class Shooting:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         state = Shooting.STATE_EXIT_QUIT
+                    if event.key == pygame.K_c:
+                        Gss.settings.SetNoWait(not Gss.settings.GetNoWait())
             Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             Shooting.scene.player.Process()
