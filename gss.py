@@ -1857,11 +1857,17 @@ class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
-        self.linear2 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
+        self.linear2 = nn.Linear(18, 18)
+        self.linear3 = nn.Linear(18, 18)
+        self.linear4 = nn.Linear(18, 18)
+        self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
 
     def forward(self, x):
         x = F.relu(self.linear1(x))
-        x = self.linear2(x)
+        x = F.relu(self.linear2(x))
+        x = F.relu(self.linear3(x))
+        x = F.relu(self.linear4(x))
+        x = self.linear5(x)
         return x
 
     def Load(self, genes):
@@ -1870,7 +1876,7 @@ class NeuralNetwork(nn.Module):
 
     def Infer(self, values):
         # TODO: Rewrite with PyTorch
-        results = self(torch.Tensor(values)).tolist()
+        results = self(torch.tensor(values)).tolist()
         print("results:", results);
         return results
 
@@ -1882,6 +1888,34 @@ class Trainer:
         self.model = model
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
         self.criterion = nn.MSELosss()
+
+    def Train(self, state, action, reward, next_state, done):
+        state = torch.tensor(state, dtype=torch.float)
+        next_state = torch.tensor(next_state, dtype= torch.float)
+        action = torch.tensor(action, dtype=torch.long)
+        reward = torch.tensor(reward, dtype=torch.float)
+        if len(state.shape) == 1:
+            state = torch.unsqueeze(state, 0)
+            next_state = torch.unsqueeze(next_state, 0)
+            action = torch.unsqueeze(action, 0)
+            reward = torch.unsqueeze(reward, 0)
+            done = torch.unsqueeze(done, 0)
+
+        # Predict Q values
+        pred = self.model(state)
+
+        target = pred.clone()
+        for i in range(len(done)):
+            new_q = reward[i]
+            if not done[i]:
+                new_q = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
+            target[i][torch.argmax(action[i]).item()] = new_q
+
+        # Update the network
+        self.optimizer.zero_grad()
+        loss = self.criterion(target, pred)
+        loss.backward()
+        self.optimizer.step()
 
 
 class EmulatedJoystick(Joystick):
