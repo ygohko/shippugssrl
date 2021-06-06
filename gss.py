@@ -1854,13 +1854,20 @@ class NeuralNetwork(nn.Module):
     OUTPUT_COUNT = 4
     GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
 
+    instance = None
+
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
+        nn.init.uniform_(self.linear1.weight, -1.0, 1.0)
         self.linear2 = nn.Linear(18, 18)
+        nn.init.uniform_(self.linear2.weight, -1.0, 1.0)
         self.linear3 = nn.Linear(18, 18)
+        nn.init.uniform_(self.linear3.weight, -1.0, 1.0)
         self.linear4 = nn.Linear(18, 18)
+        nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
         self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
+        nn.init.uniform_(self.linear5.weight, -1.0, 1.0)
 
     def forward(self, x):
         x = F.relu(self.linear1(x))
@@ -1879,6 +1886,12 @@ class NeuralNetwork(nn.Module):
         results = self(torch.tensor(values)).tolist()
         print("results:", results);
         return results
+
+    def GetInstatance(cls):
+        if NeuralNetwork.instance == None:
+            NeuralNetwork.instance = NeuralNetwork()
+        return NeuralNetwork.instance
+    GetInstatance = classmethod(GetInstatance)
 
 
 class Trainer:
@@ -1925,7 +1938,7 @@ class EmulatedJoystick(Joystick):
         super().__init__()
         self.position = -1
         self.shooting = shooting
-        self.neural_network = NeuralNetwork()
+        self.neural_network = NeuralNetwork.GetInstatance()
         self.neural_network.Load(genes)
 
     def Update(self):
