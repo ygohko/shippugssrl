@@ -20,20 +20,26 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-import pygame
 import random
 import math
 import pickle
 import sys
 
+import pygame
+
 import numpy as np
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
 enemy_rand = random.Random()
 enemy_rand.seed(123)
 effect_rand = random.Random()
 effect_rand.seed(456)
-contestant_rand = random.Random()
-contestant_rand.seed(789)
+agent_rand = random.Random()
+agent_rand.seed(789)
 
 VERSION = "0.0.0"
 SCREEN_WIDTH = 640
@@ -1602,10 +1608,10 @@ class Status:
         self.frame_count = 0
         self.lap_time = 0
         self.completed = False
-        self.contestant_score = 0.0
-        self.contestant_destruction_score = 0.0
-        self.contestant_frame_score = 0.0
-        self.contestant_event_score = 0.0
+        self.agent_score = 0.0
+        self.agent_destruction_score = 0.0
+        self.agent_frame_score = 0.0
+        self.agent_event_score = 0.0
         self.penalty = 1.0
 
     def IncrementFrameNum(self):
@@ -1659,10 +1665,10 @@ class Status:
 
     def SetCompleted(self):
         self.completed = True
-        self.contestant_destruction_score = float(self.score)
-        self.contestant_frame_score = float(self.frame_count)
-        self.contestant_event_score = float(ScreenInt(self.event_count))
-        self.contestant_score = (self.contestant_destruction_score * Status.destruction_scale + self.contestant_frame_score * Status.frame_scale + self.contestant_event_score * Status.event_scale + contestant_rand.random()) * self.penalty
+        self.agent_destruction_score = float(self.score)
+        self.agent_frame_score = float(self.frame_count)
+        self.agent_event_score = float(ScreenInt(self.event_count))
+        self.agent_score = (self.agent_destruction_score * Status.destruction_scale + self.agent_frame_score * Status.frame_scale + self.agent_event_score * Status.event_scale + agent_rand.random()) * self.penalty
 
     def GetCompleted(self):
         return self.completed
@@ -1672,9 +1678,9 @@ class Status:
             self.penalty = penalty
 
     def UpdateScales(cls):
-        Status.destruction_scale = contestant_rand.random()
-        Status.frame_scale = contestant_rand.random()
-        Status.event_scale = contestant_rand.random()
+        Status.destruction_scale = agent_rand.random()
+        Status.frame_scale = agent_rand.random()
+        Status.event_scale = agent_rand.random()
     UpdateScales = classmethod(UpdateScales)
 
     def Draw(self, screen_surface):
@@ -1843,94 +1849,87 @@ class Joystick:
         return self.trigger
 
 
-class NeuralNetwork:
+class NeuralNetwork(nn.Module):
+    # TODO: Rewrite with PyTorch
     INPUT_COUNT = 28
     OUTPUT_COUNT = 4
     GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
 
+    instance = None
+
     def __init__(self):
-        self.w1 = np.zeros((18, NeuralNetwork.INPUT_COUNT))
-        self.b1 = np.zeros((18, 1))
-        self.w2 = np.zeros((18, 18))
-        self.b2 = np.zeros((18, 1))
-        self.w3 = np.zeros((18, 18))
-        self.b3 = np.zeros((18, 1))
-        self.w4 = np.zeros((18, 18))
-        self.b4 = np.zeros((18, 1))
-        self.w5 = np.zeros((NeuralNetwork.OUTPUT_COUNT, 18))
-        self.b5 = np.zeros((NeuralNetwork.OUTPUT_COUNT, 1))
+        super().__init__()
+        self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
+        nn.init.uniform_(self.linear1.weight, -1.0, 1.0)
+        self.linear2 = nn.Linear(18, 18)
+        nn.init.uniform_(self.linear2.weight, -1.0, 1.0)
+        self.linear3 = nn.Linear(18, 18)
+        nn.init.uniform_(self.linear3.weight, -1.0, 1.0)
+        self.linear4 = nn.Linear(18, 18)
+        nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
+        self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
+        nn.init.uniform_(self.linear5.weight, -1.0, 1.0)
+
+    def forward(self, x):
+        x = F.relu(self.linear1(x))
+        x = F.relu(self.linear2(x))
+        x = F.relu(self.linear3(x))
+        x = F.relu(self.linear4(x))
+        x = self.linear5(x)
+        return x
 
     def Load(self, genes):
-        index = 0
-        shape = self.w1.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.w1[i, j] = genes[index]
-                index += 1
-        shape = self.b1.shape
-        for i in range(shape[0]):
-            self.b1[i, 0] = genes[index]
-            index += 1
-        shape = self.w2.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.w2[i, j] = genes[index]
-                index += 1
-        shape = self.b2.shape
-        for i in range(shape[0]):
-            self.b2[i, 0] = genes[index]
-            index += 1
-        shape = self.w3.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.w3[i, j] = genes[index]
-                index += 1
-        shape = self.b3.shape
-        for i in range(shape[0]):
-            self.b3[i, 0] = genes[index]
-            index += 1
-        shape = self.w4.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.w4[i, j] = genes[index]
-                index += 1
-        shape = self.b4.shape
-        for i in range(shape[0]):
-            self.b4[i, 0] = genes[index]
-            index += 1
-        shape = self.w5.shape
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                self.w5[i, j] = genes[index]
-                index += 1
-        shape = self.b5.shape
-        for i in range(shape[0]):
-            self.b5[i, 0] = genes[index]
-            index += 1
+        # TODO: Remove this
+        pass
 
     def Infer(self, values):
-        input = np.array(values).reshape((NeuralNetwork.INPUT_COUNT, 1))
-        # print("input: {}".format(input))
-        a_value = np.dot(self.w1, input)
-        a_value = np.add(a_value, self.b1)
-        a_value = np.maximum(a_value, 0.0)
-        # print("a_value: {}".format(a_value))
-        b_value = np.dot(self.w2, a_value)
-        b_value = np.add(b_value, self.b2)
-        b_value = np.maximum(b_value, 0.0)
-        # print("b_value: {}".format(b_value))
-        c_value = np.dot(self.w3, b_value)
-        c_value = np.add(c_value, self.b3)
-        c_value = np.maximum(c_value, 0.0)
-        # print("c_value: {}".format(c_value))
-        d_value = np.dot(self.w4, c_value)
-        d_value = np.add(d_value, self.b4)
-        d_value = np.maximum(d_value, 0.0)
-        # print("d_value: {}".format(d_value))
-        output = np.dot(self.w5, d_value)
-        output = np.add(output, self.b5)
-        # print("output: {}".format(output))
-        return output.reshape((NeuralNetwork.OUTPUT_COUNT,)).tolist()
+        # TODO: Rewrite with PyTorch
+        results = self(torch.tensor(values)).tolist()
+        print("results:", results);
+        return results
+
+    def GetInstatance(cls):
+        if NeuralNetwork.instance == None:
+            NeuralNetwork.instance = NeuralNetwork()
+        return NeuralNetwork.instance
+    GetInstatance = classmethod(GetInstatance)
+
+
+class Trainer:
+    def __init__(self, model, lr, gamma):
+        self.lr = lr
+        self.gamma = gamma
+        self.model = model
+        self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
+        self.criterion = nn.MSELoss()
+
+    def Train(self, state, action, reward, next_state, done):
+        state = torch.tensor(state, dtype=torch.float)
+        next_state = torch.tensor(next_state, dtype= torch.float)
+        action = torch.tensor(action, dtype=torch.long)
+        reward = torch.tensor(reward, dtype=torch.float)
+        if len(state.shape) == 1:
+            state = torch.unsqueeze(state, 0)
+            next_state = torch.unsqueeze(next_state, 0)
+            action = torch.unsqueeze(action, 0)
+            reward = torch.unsqueeze(reward, 0)
+            done = torch.unsqueeze(done, 0)
+
+        # Predict Q values
+        pred = self.model(state)
+
+        target = pred.clone()
+        for i in range(len(done)):
+            new_q = reward[i]
+            if not done[i]:
+                new_q = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
+            target[i][torch.argmax(action[i]).item()] = new_q
+
+        # Update the network
+        self.optimizer.zero_grad()
+        loss = self.criterion(target, pred)
+        loss.backward()
+        self.optimizer.step()
 
 
 class EmulatedJoystick(Joystick):
@@ -1940,7 +1939,7 @@ class EmulatedJoystick(Joystick):
         super().__init__()
         self.position = -1
         self.shooting = shooting
-        self.neural_network = NeuralNetwork()
+        self.neural_network = NeuralNetwork.GetInstatance()
         self.neural_network.Load(genes)
 
     def Update(self):
@@ -2057,52 +2056,52 @@ class EmulatedJoystick(Joystick):
         return self.trigger
 
 
-class Contestant:
+class Agent:
     ALPHA = 0.2
     MUTATION_RATE = 0.5
 
     def __init__(self):
         self.genes = []
         for i in range(NeuralNetwork.GENE_COUNT):
-            self.genes.append(contestant_rand.random() * 2.0 - 1.0)
+            self.genes.append(agent_rand.random() * 2.0 - 1.0)
         self.score = 0
         self.destruction_score = 0
         self.frame_score = 0
         self.event_score = 0
 
     def Clone(self):
-        contestant = Contestant()
-        contestant.genes = self.genes[:]
-        contestant.score = self.score
-        contestant.destruction_score = self.destruction_score
-        contestant.frame_score = self.frame_score
-        contestant.event_score = self.event_score
-        return contestant
+        agent = Agent()
+        agent.genes = self.genes[:]
+        agent.score = self.score
+        agent.destruction_score = self.destruction_score
+        agent.frame_score = self.frame_score
+        agent.event_score = self.event_score
+        return agent
 
-    def Cross(self, contestant):
+    def Cross(self, agent):
         for i in range(len(self.genes)):
-            if contestant_rand.random() <= Contestant.MUTATION_RATE * 0.01:
-                self.genes[i] = contestant_rand.random() * 2.0 - 1.0
-                contestant.genes[i] = contestant_rand.random() * 2.0 - 1.0
-            if contestant_rand.randrange(2) == 1:
+            if agent_rand.random() <= Agent.MUTATION_RATE * 0.01:
+                self.genes[i] = agent_rand.random() * 2.0 - 1.0
+                agent.genes[i] = agent_rand.random() * 2.0 - 1.0
+            if agent_rand.randrange(2) == 1:
                 value = self.genes[i]
-                self.genes[i] = contestant.genes[i]
-                contestant.genes[i] = value
+                self.genes[i] = agent.genes[i]
+                agent.genes[i] = value
 
-    def CrossWithBCXAlpha(self, contestant):
+    def CrossWithBCXAlpha(self, agent):
         for i in range(len(self.genes)):
-            if contestant_rand.random() <= Contestant.MUTATION_RATE * 0.01:
-                self.genes[i] = contestant_rand.random() * 2.0 - 1.0
-                contestant.genes[i] = contestant_rand.random() * 2.0 - 1.0
+            if agent_rand.random() <= Agent.MUTATION_RATE * 0.01:
+                self.genes[i] = agent_rand.random() * 2.0 - 1.0
+                agent.genes[i] = agent_rand.random() * 2.0 - 1.0
             else:
-                min_value = min(self.genes[i], contestant.genes[i])
-                max_value = max(self.genes[i], contestant.genes[i])
+                min_value = min(self.genes[i], agent.genes[i])
+                max_value = max(self.genes[i], agent.genes[i])
                 diff = max_value - min_value
-                min_value -= diff * Contestant.ALPHA
-                diff += diff * Contestant.ALPHA * 2.0
-                ratio = contestant_rand.random()
+                min_value -= diff * Agent.ALPHA
+                diff += diff * Agent.ALPHA * 2.0
+                ratio = agent_rand.random()
                 self.genes[i] = min_value + diff * ratio
-                contestant.genes[i] = min_value + diff * (1.0 - ratio)
+                agent.genes[i] = min_value + diff * (1.0 - ratio)
 
     def GetGenes(self):
         return self.genes
@@ -2131,58 +2130,58 @@ class Contestant:
     def SetEventScore(self, event_score):
         self.event_score = event_score
 
-    def GetAlternated(cls, contestants):
+    def GetAlternated(cls, agents):
         elites = []
         scores = []
-        for contestant in contestants:
-            score = contestant.GetScore()
+        for agent in agents:
+            score = agent.GetScore()
             scores.append(score)
         sorted_scores = sorted(scores, reverse=True)
-        new_contestants = []
+        new_agents = []
         for i in range(2):
-            contestant = Contestant.GetFromScore(contestants, sorted_scores[i])
-            elites.append(contestant)
-            new_contestants.append(contestant)
+            agent = Agent.GetFromScore(agents, sorted_scores[i])
+            elites.append(agent)
+            new_agents.append(agent)
         for i in range(4):
             score = sorted_scores[i + 2]
             for j in range(2):
                 elite = elites[j].Clone()
-                contestant = Contestant.GetFromScore(contestants, score).Clone()
-                contestant.Cross(elite)
-                new_contestants.append(contestant)
+                agent = Agent.GetFromScore(agents, score).Clone()
+                agent.Cross(elite)
+                new_agents.append(agent)
                 elite = elites[j].Clone()
-                contestant = Contestant.GetFromScore(contestants, score).Clone()
-                contestant.CrossWithBCXAlpha(elite)
-                new_contestants.append(contestant)
-        a_index = contestant_rand.randrange(len(contestants))
-        b_index = contestant_rand.randrange(len(contestants))
-        a_contestant = contestants[a_index].Clone()
-        b_contestant = contestants[b_index].Clone()
-        b_contestant.Cross(a_contestant)
-        new_contestants.append(b_contestant)
-        a_contestant = contestants[a_index].Clone()
-        b_contestant = contestants[b_index].Clone()
-        b_contestant.CrossWithBCXAlpha(a_contestant)
-        new_contestants.append(b_contestant)
-        return new_contestants
+                agent = Agent.GetFromScore(agents, score).Clone()
+                agent.CrossWithBCXAlpha(elite)
+                new_agents.append(agent)
+        a_index = agent_rand.randrange(len(agents))
+        b_index = agent_rand.randrange(len(agents))
+        a_agent = agents[a_index].Clone()
+        b_agent = agents[b_index].Clone()
+        b_agent.Cross(a_agent)
+        new_agents.append(b_agent)
+        a_agent = agents[a_index].Clone()
+        b_agent = agents[b_index].Clone()
+        b_agent.CrossWithBCXAlpha(a_agent)
+        new_agents.append(b_agent)
+        return new_agents
     GetAlternated = classmethod(GetAlternated)
 
     def Load(cls, filename):
         with open(filename, "rb") as file:
             saved = pickle.load(file)
-        return saved["contestants"], saved["generation"]
+        return saved["agents"], saved["generation"]
     Load = classmethod(Load)
 
-    def Save(cls, contestants, generation, filename):
-        saving = {"generation": generation, "contestants": contestants}
+    def Save(cls, agents, generation, filename):
+        saving = {"generation": generation, "agents": agents}
         with open(filename, "wb") as file:
             pickle.dump(saving, file)
     Save = classmethod(Save)
 
-    def GetFromScore(cls, contestants, score):
-        for contestant in contestants:
-            if contestant.GetScore() == score:
-                return contestant
+    def GetFromScore(cls, agents, score):
+        for agent in agents:
+            if agent.GetScore() == score:
+                return agent
         return None
     GetFromScore = classmethod(GetFromScore)
 
@@ -2194,7 +2193,7 @@ class Gss:
     settings = None
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-    def __init__(self, contestants, generation, settings):
+    def __init__(self, settings):
         pygame.init()
         Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         pygame.mouse.set_visible(1)
@@ -2203,15 +2202,8 @@ class Gss:
         Gss.joystick = Joystick()
         Gss.data = Data()
         Gss.settings = settings
-        if contestants == None:
-            self.generation = 1
-            self.contestants = []
-            for i in range(20):
-                self.contestants.append(Contestant())
-        else:
-            self.generation = generation
-            self.contestants = contestants
-        self.contestant_index = 0
+        self.agent = Agent()
+        self.trainer = Trainer(NeuralNetwork.GetInstatance(), 0.001, 0.9)
 
     def Main(self):
         Status.UpdateScales()
@@ -2221,26 +2213,19 @@ class Gss:
             enemy_rand.seed(123)
             effect_rand.seed(456)
             shooting = Shooting()
-            Gss.joystick = EmulatedJoystick(shooting, self.contestants[self.contestant_index].GetGenes())
+            Gss.joystick = EmulatedJoystick(shooting, self.agent.GetGenes())
             shooting.MainLoop()
-            score = shooting.scene.status.contestant_score
-            self.contestants[self.contestant_index].SetScore(score)
-            destruction_score = shooting.scene.status.contestant_destruction_score
-            self.contestants[self.contestant_index].SetDestructionScore(destruction_score)
-            frame_score = shooting.scene.status.contestant_frame_score
-            self.contestants[self.contestant_index].SetFrameScore(frame_score)
-            event_score = shooting.scene.status.contestant_event_score
-            self.contestants[self.contestant_index].SetEventScore(event_score)
-            print("Generation: {}, Contestant: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, self.contestant_index, score, destruction_score, frame_score, event_score))
+            score = shooting.scene.status.agent_score
+            self.agent.SetScore(score)
+            destruction_score = shooting.scene.status.agent_destruction_score
+            self.agent.SetDestructionScore(destruction_score)
+            frame_score = shooting.scene.status.agent_frame_score
+            self.agent.SetFrameScore(frame_score)
+            event_score = shooting.scene.status.agent_event_score
+            self.agent.SetEventScore(event_score)
+            print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
-            self.contestant_index += 1
-            if self.contestant_index >= 20:
-                self.contestants = Contestant.GetAlternated(self.contestants)
-                self.generation += 1
-                Contestant.Save(self.contestants, self.generation, "gen{}.pickle".format(self.generation))
-                self.contestant_index = 0
-                if (self.generation % 10) == 0:
-                    Status.UpdateScales()
+            # TODO: Train the network
 
 
 class LogoPart(Actor):
@@ -2938,8 +2923,6 @@ class Shooting:
 
 
 if __name__ == "__main__":
-    contestants = None
-    generation = 0
     settings = Settings()
     for argument in enumerate(sys.argv):
         if argument[0] > 0:
@@ -2949,6 +2932,4 @@ if __name__ == "__main__":
                         settings.SetNoWait(True)
                     elif character == "s":
                         settings.SetSilent(True)
-            else:
-                contestants, generation = Contestant.Load(argument[1])
-    Gss(contestants, generation, settings).Main()
+    Gss(settings).Main()
