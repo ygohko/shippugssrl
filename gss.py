@@ -32,6 +32,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 
 enemy_rand = random.Random()
 enemy_rand.seed(123)
@@ -1900,7 +1901,7 @@ class Trainer:
         self.gamma = gamma
         self.model = model
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
-        self.criterion = nn.MSELosss()
+        self.criterion = nn.MSELoss()
 
     def Train(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype=torch.float)
@@ -2192,7 +2193,7 @@ class Gss:
     settings = None
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-    def __init__(self, contestants, generation, settings):
+    def __init__(self, settings):
         pygame.init()
         Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         pygame.mouse.set_visible(1)
@@ -2201,15 +2202,8 @@ class Gss:
         Gss.joystick = Joystick()
         Gss.data = Data()
         Gss.settings = settings
-        if contestants == None:
-            self.generation = 1
-            self.contestants = []
-            for i in range(20):
-                self.contestants.append(Contestant())
-        else:
-            self.generation = generation
-            self.contestants = contestants
-        self.contestant_index = 0
+        self.contestant = Contestant()
+        self.trainer = Trainer(NeuralNetwork.GetInstatance(), 0.001, 0.9)
 
     def Main(self):
         Status.UpdateScales()
@@ -2936,8 +2930,6 @@ class Shooting:
 
 
 if __name__ == "__main__":
-    contestants = None
-    generation = 0
     settings = Settings()
     for argument in enumerate(sys.argv):
         if argument[0] > 0:
@@ -2947,6 +2939,4 @@ if __name__ == "__main__":
                         settings.SetNoWait(True)
                     elif character == "s":
                         settings.SetSilent(True)
-            else:
-                contestants, generation = Contestant.Load(argument[1])
-    Gss(contestants, generation, settings).Main()
+    Gss(settings).Main()
