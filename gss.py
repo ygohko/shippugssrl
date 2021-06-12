@@ -2225,6 +2225,7 @@ class Gss:
             self.agent.SetEventScore(event_score)
             print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
+            # TODO: Train the network
 
 
 class LogoPart(Actor):
