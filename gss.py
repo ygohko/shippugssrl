@@ -1726,7 +1726,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agent.AddCurrentReward(1.0)
+                    Gss.agent.AddCurrentReward(10.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1938,6 +1938,7 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
+    EPSILON = 0.1
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2029,7 +2030,18 @@ class EmulatedJoystick(Joystick):
         if y > (SCREEN_HEIGHT - 100.0):
             value = (y - (SCREEN_HEIGHT - 100.0)) / 100.0
         values[27] = value
-        inferred = self.neural_network.Infer(values)
+        if (agent_rand.random() > EmulatedJoystick.EPSILON):
+            inferred = self.neural_network.Infer(values)
+        else:
+            inferred = [0.0] * 4
+            if agent_rand.randrange(2) == 1:
+                inferred[0] = 1.0
+            else:
+                inferred[2] = 1.0
+            if agent_rand.randrange(2) == 1:
+                inferred[1] = 1.0
+            else:
+                inferred[3] = 1.0
         # print(values,inferred)
         self.pressed = 0
         if inferred[0] > inferred[2]:
