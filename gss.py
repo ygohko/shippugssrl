@@ -1908,6 +1908,7 @@ class Trainer:
         next_state = torch.tensor(next_state, dtype= torch.float)
         action = torch.tensor(action, dtype=torch.long)
         reward = torch.tensor(reward, dtype=torch.float)
+        done = torch.tensor(done, dtype=torch.float)
         if len(state.shape) == 1:
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
@@ -1935,12 +1936,12 @@ class Trainer:
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
 
-    def __init__(self, shooting, genes):
+    def __init__(self, shooting, agent):
         super().__init__()
         self.position = -1
         self.shooting = shooting
         self.neural_network = NeuralNetwork.GetInstatance()
-        self.neural_network.Load(genes)
+        self.agent = agent
 
     def Update(self):
         self.position += 1
@@ -2048,6 +2049,7 @@ class EmulatedJoystick(Joystick):
         if self.pressed & Joystick.LEFT and self.pressed & Joystick.RIGHT:
             self.pressed &= (Joystick.UP | Joystick.DOWN | Joystick.A | Joystick.B)
         self.trigger = (self.pressed ^ self.old) & self.pressed
+        self.agent.Remember((values, inferred))
 
     def GetPressed(self):
         return self.pressed
@@ -2068,6 +2070,8 @@ class Agent:
         self.destruction_score = 0
         self.frame_score = 0
         self.event_score = 0
+        self.experiences = []
+        self.trainer = Trainer(NeuralNetwork.GetInstatance(), 0.001, 0.9)
 
     def Clone(self):
         agent = Agent()
@@ -2076,7 +2080,24 @@ class Agent:
         agent.destruction_score = self.destruction_score
         agent.frame_score = self.frame_score
         agent.event_score = self.event_score
+        agant.experiences = self.experiences[:]
         return agent
+
+    def Remember(self, experience):
+        self.experiences.append(experience)
+
+    def Train(self):
+        neural_network = NeuralNetwork.GetInstatance()
+        loop_count = len(self.experiences) - 1
+        for i in range(loop_count):
+            experience = self.experiences[i]
+            next_experice = self.experiences[i + 1]
+            # TODO: Store rewards
+            reward = 0.0
+            # TODO: Store dones
+            done = 0.0
+            self.trainer.Train(experience[0], experience[1], reward, next_experice[0], done)
+        self.experiences = []
 
     def Cross(self, agent):
         for i in range(len(self.genes)):
@@ -2203,7 +2224,6 @@ class Gss:
         Gss.data = Data()
         Gss.settings = settings
         self.agent = Agent()
-        self.trainer = Trainer(NeuralNetwork.GetInstatance(), 0.001, 0.9)
 
     def Main(self):
         Status.UpdateScales()
@@ -2213,7 +2233,7 @@ class Gss:
             enemy_rand.seed(123)
             effect_rand.seed(456)
             shooting = Shooting()
-            Gss.joystick = EmulatedJoystick(shooting, self.agent.GetGenes())
+            Gss.joystick = EmulatedJoystick(shooting, self.agent)
             shooting.MainLoop()
             score = shooting.scene.status.agent_score
             self.agent.SetScore(score)
@@ -2226,6 +2246,7 @@ class Gss:
             print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             # TODO: Train the network
+            self.agent.Train()
 
 
 class LogoPart(Actor):
