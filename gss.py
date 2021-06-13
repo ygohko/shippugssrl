@@ -1726,6 +1726,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
+                    Gss.agent.AddCurrentReward(1.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1733,12 +1734,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
+                Gss.agent.AddCurrentReward(-1.0)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
+                Gss.agent.AddCurrentReward(-1.0)
 
 
 class EventParser:
@@ -1906,7 +1909,7 @@ class Trainer:
     def Train(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype= torch.float)
-        action = torch.tensor(action, dtype=torch.long)
+        action = torch.tensor(action, dtype=torch.float)
         reward = torch.tensor(reward, dtype=torch.float)
         done = torch.tensor(done, dtype=torch.float)
         if len(state.shape) == 1:
@@ -1942,6 +1945,8 @@ class EmulatedJoystick(Joystick):
         self.shooting = shooting
         self.neural_network = NeuralNetwork.GetInstatance()
         self.agent = agent
+        self.state_values = []
+        self.action_values = []
 
     def Update(self):
         self.position += 1
@@ -2049,13 +2054,36 @@ class EmulatedJoystick(Joystick):
         if self.pressed & Joystick.LEFT and self.pressed & Joystick.RIGHT:
             self.pressed &= (Joystick.UP | Joystick.DOWN | Joystick.A | Joystick.B)
         self.trigger = (self.pressed ^ self.old) & self.pressed
-        self.agent.Remember((values, inferred))
+        self.state_values = values
+        if inferred[0] > 0.0:
+            inferred[0] = 1.0
+        if inferred[1] > 0.0:
+            inferred[1] = 1.0
+        if inferred[2] > 0.0:
+            inferred[2] = 1.0
+        if inferred[3] > 0.0:
+            inferred[3] = 1.0
+        if inferred[0] < 0.0:
+            inferred[0] = 0.0
+        if inferred[1] < 0.0:
+            inferred[1] = 0.0
+        if inferred[2] < 0.0:
+            inferred[2] = 0.0
+        if inferred[3] < 0.0:
+            inferred[3] = 0.0
+        self.action_values = inferred
 
     def GetPressed(self):
         return self.pressed
 
     def GetTrigger(self):
         return self.trigger
+
+    def GetStateValues(self):
+        return self.state_values
+
+    def GetActionValues(self):
+        return self.action_values
 
 
 class Agent:
@@ -2072,6 +2100,7 @@ class Agent:
         self.event_score = 0
         self.experiences = []
         self.trainer = Trainer(NeuralNetwork.GetInstatance(), 0.001, 0.9)
+        self.current_reward = 0.0
 
     def Clone(self):
         agent = Agent()
@@ -2098,6 +2127,15 @@ class Agent:
             done = 0.0
             self.trainer.Train(experience[0], experience[1], reward, next_experice[0], done)
         self.experiences = []
+
+    def AddCurrentReward(self, reward):
+        self.current_reward += reward
+
+    def GetCurrentReward(self):
+        return self.current_reward
+
+    def ClearCurrentReward(self):
+        self.current_reward = 0.0
 
     def Cross(self, agent):
         for i in range(len(self.genes)):
@@ -2223,7 +2261,7 @@ class Gss:
         Gss.joystick = Joystick()
         Gss.data = Data()
         Gss.settings = settings
-        self.agent = Agent()
+        Gss.agent = Agent()
 
     def Main(self):
         Status.UpdateScales()
@@ -2233,20 +2271,20 @@ class Gss:
             enemy_rand.seed(123)
             effect_rand.seed(456)
             shooting = Shooting()
-            Gss.joystick = EmulatedJoystick(shooting, self.agent)
+            Gss.joystick = EmulatedJoystick(shooting, Gss.agent)
             shooting.MainLoop()
             score = shooting.scene.status.agent_score
-            self.agent.SetScore(score)
+            Gss.agent.SetScore(score)
             destruction_score = shooting.scene.status.agent_destruction_score
-            self.agent.SetDestructionScore(destruction_score)
+            Gss.agent.SetDestructionScore(destruction_score)
             frame_score = shooting.scene.status.agent_frame_score
-            self.agent.SetFrameScore(frame_score)
+            Gss.agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
-            self.agent.SetEventScore(event_score)
+            Gss.agent.SetEventScore(event_score)
             print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             # TODO: Train the network
-            self.agent.Train()
+            Gss.agent.Train()
 
 
 class LogoPart(Actor):
@@ -2890,6 +2928,8 @@ class Shooting:
             Shooting.scene.CheckBulletPlayerCollision()
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
+            Gss.agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValues(), Gss.agent.GetCurrentReward()))
+            Gss.agent.ClearCurrentReward()
             for star in Shooting.scene.stars:
                 star.Draw(Gss.screen_surface)
             for beam in Shooting.scene.beams:
