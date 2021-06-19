@@ -2133,11 +2133,9 @@ class Agent:
         for i in range(loop_count):
             experience = self.experiences[i]
             next_experice = self.experiences[i + 1]
-            # TODO: Store rewards
-            reward = 0.0
             # TODO: Store dones
             done = 0.0
-            self.trainer.Train(experience[0], experience[1], reward, next_experice[0], done)
+            self.trainer.Train(experience[0], experience[1], experience[2], next_experice[0], done)
         self.experiences = []
 
     def AddCurrentReward(self, reward):
