@@ -259,7 +259,7 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                Shooting.scene.status.UpdatePenalty(0.1)
+                Gss.agent.AddCurrentReward(-1)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1911,13 +1911,12 @@ class Trainer:
         next_state = torch.tensor(next_state, dtype= torch.float)
         action = torch.tensor(action, dtype=torch.float)
         reward = torch.tensor(reward, dtype=torch.float)
-        done = torch.tensor(done, dtype=torch.float)
         if len(state.shape) == 1:
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
-            done = torch.unsqueeze(done, 0)
+            done = (done,)
 
         # Predict Q values
         pred = self.model(state)
@@ -2128,16 +2127,34 @@ class Agent:
         self.experiences.append(experience)
 
     def Train(self):
+        self.TrainLongMemory()
+
+    def TrainShortMemory(self):
         neural_network = NeuralNetwork.GetInstatance()
         loop_count = len(self.experiences) - 1
         for i in range(loop_count):
             experience = self.experiences[i]
             next_experice = self.experiences[i + 1]
-            # TODO: Store rewards
-            reward = 0.0
-            # TODO: Store dones
-            done = 0.0
-            self.trainer.Train(experience[0], experience[1], reward, next_experice[0], done)
+            self.trainer.Train(experience[0], experience[1], experience[2], next_experice[0], experience[3])
+        self.experiences = []
+
+    def TrainLongMemory(self):
+        neural_network = NeuralNetwork.GetInstatance()
+        loop_count = len(self.experiences) - 1
+        states = []
+        actions = []
+        rewards = []
+        next_states = []
+        dones = []
+        for i in range(loop_count):
+            experience = self.experiences[i]
+            next_experice = self.experiences[i + 1]
+            states.append(experience[0])
+            actions.append(experience[1])
+            rewards.append(experience[2])
+            next_states.append(next_experice[0])
+            dones.append(experience[3])
+        self.trainer.Train(states, actions, rewards, next_states, dones)
         self.experiences = []
 
     def AddCurrentReward(self, reward):
@@ -2295,7 +2312,6 @@ class Gss:
             Gss.agent.SetEventScore(event_score)
             print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
-            # TODO: Train the network
             Gss.agent.Train()
 
 
@@ -2940,7 +2956,11 @@ class Shooting:
             Shooting.scene.CheckBulletPlayerCollision()
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
-            Gss.agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValues(), Gss.agent.GetCurrentReward()))
+            reward = Gss.agent.GetCurrentReward()
+            done = False
+            if reward != 0.0:
+                done = True
+            Gss.agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValues(), Gss.agent.GetCurrentReward(), done))
             Gss.agent.ClearCurrentReward()
             for star in Shooting.scene.stars:
                 star.Draw(Gss.screen_surface)
