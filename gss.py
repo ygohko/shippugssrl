@@ -245,6 +245,7 @@ class Player(Actor):
 
     def Move(self):
         shot_cnt = 0
+        living_cnt = 0
         while True:
             pressed = Gss.joystick.GetPressed()
             if pressed & Joystick.RIGHT:
@@ -259,7 +260,13 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                Gss.agent.AddCurrentReward(-1)
+                Gss.agent.AddCurrentReward(-1.0)
+            living_cnt += 1
+            if self.x > Fixed(320):
+                living_cnt = 0
+            if living_cnt >= 60:
+                Gss.agent.AddCurrentReward(1.0)
+                living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
