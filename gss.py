@@ -260,12 +260,13 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                Gss.agent.AddCurrentReward(-1.0)
+                # Gss.agent.AddCurrentReward(-1.0)
+                pass
             living_cnt += 1
             if self.x > Fixed(320):
                 living_cnt = 0
             if living_cnt >= 60:
-                Gss.agent.AddCurrentReward(1.0)
+                Gss.agent.AddCurrentReward(10.0)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1741,14 +1742,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agent.AddCurrentReward(-1.0)
+                # Gss.agent.AddCurrentReward(-1.0)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agent.AddCurrentReward(-1.0)
+                # Gss.agent.AddCurrentReward(-1.0)
 
 
 class EventParser:
