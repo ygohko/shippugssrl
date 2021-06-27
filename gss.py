@@ -266,7 +266,7 @@ class Player(Actor):
             if self.x > Fixed(320):
                 living_cnt = 0
             if living_cnt >= 60:
-                Gss.agent.AddCurrentReward(10.0)
+                Gss.agent.AddCurrentReward(1.0)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1734,7 +1734,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agent.AddCurrentReward(10.0)
+                    Gss.agent.AddCurrentReward(1.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1894,9 +1894,8 @@ class NeuralNetwork(nn.Module):
         pass
 
     def Infer(self, values):
-        # TODO: Rewrite with PyTorch
         results = self(torch.tensor(values)).tolist()
-        print("results:", results);
+        # print("results:", results);
         return results
 
     def GetInstatance(cls):
@@ -1927,7 +1926,9 @@ class Trainer:
             done = (done,)
 
         # Predict Q values
+        # print("state.shape: ", state.shape)
         pred = self.model(state)
+        # print("pred.shape: ", pred.shape)
 
         target = pred.clone()
         for i in range(len(done)):
@@ -1937,8 +1938,11 @@ class Trainer:
             target[i][torch.argmax(action[i]).item()] = new_q
 
         # Update the network
+        # print("target.shape: ", target.shape)
         self.optimizer.zero_grad()
+        print("pred: ", pred)
         loss = self.criterion(target, pred)
+        # print("loss: ", loss)
         loss.backward()
         self.optimizer.step()
 
@@ -2074,22 +2078,22 @@ class EmulatedJoystick(Joystick):
             self.pressed &= (Joystick.UP | Joystick.DOWN | Joystick.A | Joystick.B)
         self.trigger = (self.pressed ^ self.old) & self.pressed
         self.state_values = values
-        if inferred[0] > 0.0:
-            inferred[0] = 1.0
-        if inferred[1] > 0.0:
-            inferred[1] = 1.0
-        if inferred[2] > 0.0:
-            inferred[2] = 1.0
-        if inferred[3] > 0.0:
-            inferred[3] = 1.0
-        if inferred[0] < 0.0:
-            inferred[0] = 0.0
-        if inferred[1] < 0.0:
-            inferred[1] = 0.0
-        if inferred[2] < 0.0:
-            inferred[2] = 0.0
-        if inferred[3] < 0.0:
-            inferred[3] = 0.0
+        # if inferred[0] > 0.0:
+        #     inferred[0] = 1.0
+        # if inferred[1] > 0.0:
+        #     inferred[1] = 1.0
+        # if inferred[2] > 0.0:
+        #     inferred[2] = 1.0
+        # if inferred[3] > 0.0:
+        #     inferred[3] = 1.0
+        # if inferred[0] < 0.0:
+        #     inferred[0] = 0.0
+        # if inferred[1] < 0.0:
+        #     inferred[1] = 0.0
+        # if inferred[2] < 0.0:
+        #     inferred[2] = 0.0
+        # if inferred[3] < 0.0:
+        #     inferred[3] = 0.0
         self.action_values = inferred
 
     def GetPressed(self):
@@ -2161,8 +2165,15 @@ class Agent:
             actions.append(experience[1])
             rewards.append(experience[2])
             next_states.append(next_experice[0])
-            dones.append(experience[3])
-        self.trainer.Train(states, actions, rewards, next_states, dones)
+            done = experience[3]
+            dones.append(done)
+            if done:
+                self.trainer.Train(states, actions, rewards, next_states, dones)
+                states = []
+                actions = []
+                rewards = []
+                next_states = []
+                dones = []
         self.experiences = []
 
     def AddCurrentReward(self, reward):
@@ -2318,7 +2329,7 @@ class Gss:
             Gss.agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
             Gss.agent.SetEventScore(event_score)
-            print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
+            # print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             Gss.agent.Train()
 
