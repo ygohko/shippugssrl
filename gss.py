@@ -260,13 +260,13 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                # Gss.agent.AddCurrentReward(-1.0)
+                Gss.agent.AddCurrentReward(-2.0)
                 pass
             living_cnt += 1
-            if self.x > Fixed(320):
+            if self.x > Fixed(160):
                 living_cnt = 0
             if living_cnt >= 60:
-                Gss.agent.AddCurrentReward(1.0)
+                Gss.agent.AddCurrentReward(2.0)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1734,7 +1734,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agent.AddCurrentReward(1.0)
+                    Gss.agent.AddCurrentReward(2.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1742,14 +1742,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                # Gss.agent.AddCurrentReward(-1.0)
+                Gss.agent.AddCurrentReward(-0.2)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                # Gss.agent.AddCurrentReward(-1.0)
+                Gss.agent.AddCurrentReward(-0.2)
 
 
 class EventParser:
@@ -1927,21 +1927,36 @@ class Trainer:
 
         # Predict Q values
         # print("state.shape: ", state.shape)
+        # print("state: ", state)
         pred = self.model(state)
         # print("pred.shape: ", pred.shape)
+        # print("action: ", action)
+        # print("pred: ", pred)
 
         target = pred.clone()
         for i in range(len(done)):
-            new_q = reward[i]
+            a_reward = reward[i]
+            index = torch.argmax(action[i]).item()
+            # TODO: Rotate index if reward less than zero?
+            new_q = a_reward
             if not done[i]:
-                new_q = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
-            target[i][torch.argmax(action[i]).item()] = new_q
+                values = self.model(next_state[i])
+                value = values[index]
+                if value > 1.0:
+                    value = 1.0
+                if value < -1.0:
+                    value = -1.0
+                new_q = a_reward + self.gamma * value
+                # new_q = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
+            target[i][index] = new_q
 
         # Update the network
         # print("target.shape: ", target.shape)
+        print("target: ", target)
         self.optimizer.zero_grad()
-        print("pred: ", pred)
-        loss = self.criterion(target, pred)
+        # print("target: ", target)
+        # loss = self.criterion(target, pred)
+        loss = self.criterion(pred, target)
         # print("loss: ", loss)
         loss.backward()
         self.optimizer.step()
@@ -1949,7 +1964,7 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.1
+    EPSILON = 0.2
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2053,6 +2068,7 @@ class EmulatedJoystick(Joystick):
                 inferred[1] = 1.0
             else:
                 inferred[3] = 1.0
+        # self.action_values = inferred[:]
         # print(values,inferred)
         self.pressed = 0
         if inferred[0] > inferred[2]:
@@ -2078,22 +2094,22 @@ class EmulatedJoystick(Joystick):
             self.pressed &= (Joystick.UP | Joystick.DOWN | Joystick.A | Joystick.B)
         self.trigger = (self.pressed ^ self.old) & self.pressed
         self.state_values = values
-        # if inferred[0] > 0.0:
-        #     inferred[0] = 1.0
-        # if inferred[1] > 0.0:
-        #     inferred[1] = 1.0
-        # if inferred[2] > 0.0:
-        #     inferred[2] = 1.0
-        # if inferred[3] > 0.0:
-        #     inferred[3] = 1.0
-        # if inferred[0] < 0.0:
-        #     inferred[0] = 0.0
-        # if inferred[1] < 0.0:
-        #     inferred[1] = 0.0
-        # if inferred[2] < 0.0:
-        #     inferred[2] = 0.0
-        # if inferred[3] < 0.0:
-        #     inferred[3] = 0.0
+        if inferred[0] > 1.0:
+            inferred[0] = 1.0
+        if inferred[1] > 1.0:
+            inferred[1] = 1.0
+        if inferred[2] > 1.0:
+            inferred[2] = 1.0
+        if inferred[3] > 1.0:
+            inferred[3] = 1.0
+        if inferred[0] < 0.0:
+            inferred[0] = 0.0
+        if inferred[1] < 0.0:
+            inferred[1] = 0.0
+        if inferred[2] < 0.0:
+            inferred[2] = 0.0
+        if inferred[3] < 0.0:
+            inferred[3] = 0.0
         self.action_values = inferred
 
     def GetPressed(self):
@@ -2177,7 +2193,8 @@ class Agent:
         self.experiences = []
 
     def AddCurrentReward(self, reward):
-        self.current_reward += reward
+        # self.current_reward += reward
+        self.current_reward = reward
 
     def GetCurrentReward(self):
         return self.current_reward
