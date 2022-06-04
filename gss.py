@@ -20,6 +20,7 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+import copy
 import random
 import math
 import pickle
@@ -1861,12 +1862,12 @@ class Joystick:
 
 
 class NeuralNetwork(nn.Module):
-    # TODO: Rewrite with PyTorch
     INPUT_COUNT = 28
     OUTPUT_COUNT = 4
     GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
 
     instance = None
+    previous = None
 
     def __init__(self):
         super().__init__()
@@ -1880,6 +1881,7 @@ class NeuralNetwork(nn.Module):
         nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
         self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
         nn.init.uniform_(self.linear5.weight, -1.0, 1.0)
+        self.score = 0
 
     def forward(self, x):
         x = F.relu(self.linear1(x))
@@ -1898,11 +1900,29 @@ class NeuralNetwork(nn.Module):
         # print("results:", results);
         return results
 
+    def GetScore(self):
+        return self.score
+
+    def SetScore(self, score):
+        self.score = score
+
     def GetInstatance(cls):
         if NeuralNetwork.instance == None:
             NeuralNetwork.instance = NeuralNetwork()
         return NeuralNetwork.instance
     GetInstatance = classmethod(GetInstatance)
+
+    def GetPrevious(cls):
+        return NeuralNetwork.previous
+    GetPrevious = classmethod(GetPrevious)
+
+    def UpdatePrevious(cls):
+        NeuralNetwork.previous = copy.deepcopy(NeuralNetwork.instance)
+    UpdatePrevious = classmethod(UpdatePrevious)
+
+    def RollbackFromPrevious(cls):
+        NeuralNetwork.instance = copy.deepcopy(NeuralNetwork.previous)
+    RollbackFromPrevious = classmethod(RollbackFromPrevious)
 
 
 class Trainer:
@@ -1937,7 +1957,10 @@ class Trainer:
         for i in range(len(done)):
             a_reward = reward[i]
             index = torch.argmax(action[i]).item()
-            # TODO: Rotate index if reward less than zero?
+            # if a_reward < 0.0:
+            #     a_reward *= -1.0
+            #     index += 1
+            #     index &= 3
             new_q = a_reward
             if not done[i]:
                 values = self.model(next_state[i])
@@ -1952,7 +1975,7 @@ class Trainer:
 
         # Update the network
         # print("target.shape: ", target.shape)
-        print("target: ", target)
+        # print("target: ", target)
         self.optimizer.zero_grad()
         # print("target: ", target)
         # loss = self.criterion(target, pred)
@@ -2168,6 +2191,17 @@ class Agent:
 
     def TrainLongMemory(self):
         neural_network = NeuralNetwork.GetInstatance()
+        neural_network.SetScore(self.score)
+        previous_neural_network = NeuralNetwork.GetPrevious()
+        print("Current score: ", self.score)
+        if previous_neural_network != None:
+            print("Previous score: ", previous_neural_network.GetScore())
+        if previous_neural_network != None and self.score < previous_neural_network.GetScore():
+            print("Neural network rollbacked.")
+            NeuralNetwork.RollbackFromPrevious()
+            neural_network = NeuralNetwork.GetInstatance()
+        else:
+            NeuralNetwork.UpdatePrevious()
         loop_count = len(self.experiences) - 1
         states = []
         actions = []
@@ -2346,7 +2380,7 @@ class Gss:
             Gss.agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
             Gss.agent.SetEventScore(event_score)
-            # print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
+            print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             Gss.agent.Train()
 
