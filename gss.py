@@ -20,6 +20,7 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+import copy
 import random
 import math
 import pickle
@@ -265,8 +266,8 @@ class Player(Actor):
             living_cnt += 1
             if self.x > Fixed(160):
                 living_cnt = 0
-            if living_cnt >= 60:
-                Gss.agent.AddCurrentReward(2.0)
+            if living_cnt >= 30:
+                Gss.agent.AddCurrentReward(1.0)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1742,14 +1743,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agent.AddCurrentReward(-0.2)
+                Gss.agent.AddCurrentReward(-1.0)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agent.AddCurrentReward(-0.2)
+                Gss.agent.AddCurrentReward(-1.0)
 
 
 class EventParser:
@@ -1861,25 +1862,26 @@ class Joystick:
 
 
 class NeuralNetwork(nn.Module):
-    # TODO: Rewrite with PyTorch
     INPUT_COUNT = 28
     OUTPUT_COUNT = 4
     GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
 
     instance = None
+    previous = None
 
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
-        nn.init.uniform_(self.linear1.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear1.weight, -0.5, 0.5)
         self.linear2 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear2.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear2.weight, -0.5, 0.5)
         self.linear3 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear3.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear3.weight, -0.5, 0.5)
         self.linear4 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear4.weight, -0.5, 0.5)
         self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
-        nn.init.uniform_(self.linear5.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear5.weight, -0.5, 0.5)
+        self.score = 0
 
     def forward(self, x):
         x = F.relu(self.linear1(x))
@@ -1898,11 +1900,29 @@ class NeuralNetwork(nn.Module):
         # print("results:", results);
         return results
 
+    def GetScore(self):
+        return self.score
+
+    def SetScore(self, score):
+        self.score = score
+
     def GetInstatance(cls):
         if NeuralNetwork.instance == None:
             NeuralNetwork.instance = NeuralNetwork()
         return NeuralNetwork.instance
     GetInstatance = classmethod(GetInstatance)
+
+    def GetPrevious(cls):
+        return NeuralNetwork.previous
+    GetPrevious = classmethod(GetPrevious)
+
+    def UpdatePrevious(cls):
+        NeuralNetwork.previous = copy.deepcopy(NeuralNetwork.instance)
+    UpdatePrevious = classmethod(UpdatePrevious)
+
+    def RollbackFromPrevious(cls):
+        NeuralNetwork.instance = copy.deepcopy(NeuralNetwork.previous)
+    RollbackFromPrevious = classmethod(RollbackFromPrevious)
 
 
 class Trainer:
@@ -1936,23 +1956,32 @@ class Trainer:
         target = pred.clone()
         for i in range(len(done)):
             a_reward = reward[i]
-            index = torch.argmax(action[i]).item()
-            # TODO: Rotate index if reward less than zero?
+            indices = []
+            actions = action[i].tolist()
+            # print("actions:", actions)
+            for j in range(len(actions)):
+                if actions[j] > 0.5:
+                    indices.append(j)
             new_q = a_reward
             if not done[i]:
                 values = self.model(next_state[i])
-                value = values[index]
-                if value > 1.0:
-                    value = 1.0
-                if value < -1.0:
-                    value = -1.0
-                new_q = a_reward + self.gamma * value
-                # new_q = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
-            target[i][index] = new_q
+                for index in indices:
+                    value = values[index]
+                    if value > 1.0:
+                        value = 1.0
+                    if value < -1.0:
+                        value = -1.0
+                    new_q = a_reward + self.gamma * value
+                    # new_q = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
+                    target[i][index] = new_q
+            else:
+                for index in indices:
+                    new_q = a_reward
+                    target[i][index] = new_q
 
         # Update the network
         # print("target.shape: ", target.shape)
-        print("target: ", target)
+        # print("target: ", target)
         self.optimizer.zero_grad()
         # print("target: ", target)
         # loss = self.criterion(target, pred)
@@ -2168,6 +2197,17 @@ class Agent:
 
     def TrainLongMemory(self):
         neural_network = NeuralNetwork.GetInstatance()
+        neural_network.SetScore(self.score)
+        previous_neural_network = NeuralNetwork.GetPrevious()
+        print("Current score: ", self.score)
+        if previous_neural_network != None:
+            print("Previous score: ", previous_neural_network.GetScore())
+        if previous_neural_network != None and self.score < previous_neural_network.GetScore():
+            print("Neural network rollbacked.")
+            NeuralNetwork.RollbackFromPrevious()
+            neural_network = NeuralNetwork.GetInstatance()
+        else:
+            NeuralNetwork.UpdatePrevious()
         loop_count = len(self.experiences) - 1
         states = []
         actions = []
@@ -2346,7 +2386,7 @@ class Gss:
             Gss.agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
             Gss.agent.SetEventScore(event_score)
-            # print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
+            print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             Gss.agent.Train()
 
