@@ -1863,7 +1863,7 @@ class Joystick:
 
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
-    OUTPUT_COUNT = 4
+    OUTPUT_COUNT = 9
     GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
 
     instance = None
@@ -1872,15 +1872,15 @@ class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
-        nn.init.uniform_(self.linear1.weight, -0.5, 0.5)
+        nn.init.uniform_(self.linear1.weight, -1, 1)
         self.linear2 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear2.weight, -0.5, 0.5)
+        nn.init.uniform_(self.linear2.weight, -1, 1)
         self.linear3 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear3.weight, -0.5, 0.5)
+        nn.init.uniform_(self.linear3.weight, -1, 1)
         self.linear4 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear4.weight, -0.5, 0.5)
+        nn.init.uniform_(self.linear4.weight, -1, 1)
         self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
-        nn.init.uniform_(self.linear5.weight, -0.5, 0.5)
+        nn.init.uniform_(self.linear5.weight, -1, 1)
         self.score = 0
 
     def forward(self, x):
@@ -1993,7 +1993,7 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.2
+    EPSILON = -1.0
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2088,58 +2088,34 @@ class EmulatedJoystick(Joystick):
         if (agent_rand.random() > EmulatedJoystick.EPSILON):
             inferred = self.neural_network.Infer(values)
         else:
-            inferred = [0.0] * 4
-            if agent_rand.randrange(2) == 1:
-                inferred[0] = 1.0
-            else:
-                inferred[2] = 1.0
-            if agent_rand.randrange(2) == 1:
-                inferred[1] = 1.0
-            else:
-                inferred[3] = 1.0
-        # self.action_values = inferred[:]
-        # print(values,inferred)
+            # TODO: Generated random values
+            inferred = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        index = inferred.index(max(inferred))
         self.pressed = 0
-        if inferred[0] > inferred[2]:
-            inferred[2] = 0.0
-        if inferred[0] < inferred[2]:
-            inferred[0] = 0.0
-        if inferred[1] > inferred[3]:
-            inferred[3] = 0.0
-        if inferred[1] < inferred[3]:
-            inferred[1] = 0.0
-        if inferred[0] > EmulatedJoystick.THRESHOLD:
+        if index == 0:
             self.pressed |= Joystick.UP
-        if inferred[1] > EmulatedJoystick.THRESHOLD:
+        elif index == 1:
+            self.pressed |= Joystick.UP | Joystick.RIGHT
+        elif index == 2:
             self.pressed |= Joystick.RIGHT
-        if inferred[2] > EmulatedJoystick.THRESHOLD:
+        elif index == 3:
+            self.pressed |= Joystick.RIGHT | Joystick.DOWN
+        elif index == 4:
+            self.pressed |= Joystick.RIGHT | Joystick.DOWN
+        elif index == 5:
             self.pressed |= Joystick.DOWN
-        if inferred[3] > EmulatedJoystick.THRESHOLD:
+        elif index == 6:
+            self.pressed |= Joystick.DOWN | Joystick.LEFT
+        elif index == 7:
             self.pressed |= Joystick.LEFT
+        elif index == 8:
+            self.pressed |= Joystick.LEFT | Joystick.UP
         self.pressed |= Joystick.A
-        if self.pressed & Joystick.UP and self.pressed & Joystick.DOWN:
-            self.pressed &= (Joystick.LEFT | Joystick.RIGHT | Joystick.A | Joystick.B)
-        if self.pressed & Joystick.LEFT and self.pressed & Joystick.RIGHT:
-            self.pressed &= (Joystick.UP | Joystick.DOWN | Joystick.A | Joystick.B)
         self.trigger = (self.pressed ^ self.old) & self.pressed
         self.state_values = values
-        if inferred[0] > 1.0:
-            inferred[0] = 1.0
-        if inferred[1] > 1.0:
-            inferred[1] = 1.0
-        if inferred[2] > 1.0:
-            inferred[2] = 1.0
-        if inferred[3] > 1.0:
-            inferred[3] = 1.0
-        if inferred[0] < 0.0:
-            inferred[0] = 0.0
-        if inferred[1] < 0.0:
-            inferred[1] = 0.0
-        if inferred[2] < 0.0:
-            inferred[2] = 0.0
-        if inferred[3] < 0.0:
-            inferred[3] = 0.0
+        # TODO: Store the index
         self.action_values = inferred
+        # TODO: Store the Q value
 
     def GetPressed(self):
         return self.pressed
