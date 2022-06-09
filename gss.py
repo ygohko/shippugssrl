@@ -261,8 +261,8 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                Gss.agent.AddCurrentReward(-2.0)
-                pass
+                Gss.agent.AddCurrentReward(-1.0)
+                Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(160):
                 living_cnt = 0
@@ -1735,7 +1735,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agent.AddCurrentReward(2.0)
+                    Gss.agent.AddCurrentReward(1.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1872,15 +1872,15 @@ class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
-        nn.init.uniform_(self.linear1.weight, -1, 1)
+        nn.init.uniform_(self.linear1.weight, -1.0, 1.0)
         self.linear2 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear2.weight, -1, 1)
+        nn.init.uniform_(self.linear2.weight, -1.0, 1.0)
         self.linear3 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear3.weight, -1, 1)
+        nn.init.uniform_(self.linear3.weight, -1.0, 1.0)
         self.linear4 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear4.weight, -1, 1)
+        nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
         self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
-        nn.init.uniform_(self.linear5.weight, -1, 1)
+        nn.init.uniform_(self.linear5.weight, -1.0, 1.0)
         self.score = 0
 
     def forward(self, x):
@@ -1936,28 +1936,55 @@ class Trainer:
     def Train(self, state, q, action, next_reward, next_state):
         # TODO: Update arguments
         state = torch.tensor(state, dtype=torch.float)
-        next_state = torch.tensor(next_state, dtype= torch.float)
+        next_state = torch.tensor(next_state, dtype=torch.float)
         if len(state.shape) == 1:
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
 
         # Predict next maximum Q value
-        pred = self.model(next_state).tolist()
+        pred = self.model(next_state)[0].tolist()
+        # print("pred: ", pred)
         next_maximum_q = max(pred)
         # Prepare current Q value
         q = q[action]
 
         # Update the network
-        self.model(state)
+        output = self.model(state)
+        # print("output:", output)
         self.optimizer.zero_grad()
-        loss = self.criterion(next_reward + next_maximum_q, q)
+        # grad_fn = output.grad_fn
+        # output[0][0] = q
+        # output[0][1] = q
+        # output[0][2] = q
+        # output[0][3] = q
+        # output[0][4] = q
+        # output[0][5] = q
+        # output[0][6] = q
+        # output[0][7] = q
+        # output[0][8] = q
+        # print(dir(output))
+        # output.grad_fn = grad_fn
+        # print("output:", output)
+        a = q
+        a = [a, a, a, a, a, a, a, a, a]
+        a = torch.tensor(a, dtype=torch.float)
+        a = torch.unsqueeze(a, 0)
+        b = next_reward + self.gamma * next_maximum_q
+        b = [b, b, b, b, b, b, b, b, b]
+        b = torch.tensor(b, dtype=torch.float)
+        b = torch.unsqueeze(b, 0)
+        # print("next_reward: ", next_reward)
+        # print("next_maximum_q: ", next_maximum_q)
+        # print("b: ", b)
+        loss = self.criterion(output, b)
+        # print(loss)
         loss.backward()
         self.optimizer.step()
 
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = -1.0
+    EPSILON = 0.01
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2050,11 +2077,11 @@ class EmulatedJoystick(Joystick):
         if y > (SCREEN_HEIGHT - 100.0):
             value = (y - (SCREEN_HEIGHT - 100.0)) / 100.0
         values[27] = value
-        if (agent_rand.random() > EmulatedJoystick.EPSILON):
-            inferred = self.neural_network.Infer(values)
-        else:
-            # TODO: Generate random values
-            inferred = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        inferred = self.neural_network.Infer(values)
+        self.q_values = inferred
+        if (agent_rand.random() < EmulatedJoystick.EPSILON):
+            inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            inferred[random.randrange(9)] = 1.0
         index = inferred.index(max(inferred))
         self.pressed = 0
         if index == 0:
@@ -2078,7 +2105,6 @@ class EmulatedJoystick(Joystick):
         self.pressed |= Joystick.A
         self.trigger = (self.pressed ^ self.old) & self.pressed
         self.state_values = values
-        self.q_values = inferred
         self.action_value = index
 
     def GetPressed(self):
