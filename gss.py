@@ -1933,60 +1933,24 @@ class Trainer:
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
         self.criterion = nn.MSELoss()
 
-    def Train(self, state, action, reward, next_state, done):
+    def Train(self, state, q, action, next_reward, next_state):
+        # TODO: Update arguments
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype= torch.float)
-        action = torch.tensor(action, dtype=torch.float)
-        reward = torch.tensor(reward, dtype=torch.float)
         if len(state.shape) == 1:
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
-            action = torch.unsqueeze(action, 0)
-            reward = torch.unsqueeze(reward, 0)
-            done = (done,)
 
-        # Predict Q values
-        # print("state.shape: ", state.shape)
-        # print("state: ", state)
-        pred = self.model(state)
-        # print("pred.shape: ", pred.shape)
-        # print("action: ", action)
-        # print("pred: ", pred)
-
-        target = pred.clone()
-        for i in range(len(done)):
-            a_reward = reward[i]
-            indices = []
-            actions = action[i].tolist()
-            # print("actions:", actions)
-            for j in range(len(actions)):
-                if actions[j] > 0.5:
-                    indices.append(j)
-            new_q = a_reward
-            if not done[i]:
-                values = self.model(next_state[i])
-                for index in indices:
-                    value = values[index]
-                    if value > 1.0:
-                        value = 1.0
-                    if value < -1.0:
-                        value = -1.0
-                    new_q = a_reward + self.gamma * value
-                    # new_q = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
-                    target[i][index] = new_q
-            else:
-                for index in indices:
-                    new_q = a_reward
-                    target[i][index] = new_q
+        # Predict next maximum Q value
+        pred = self.model(next_state).tolist()
+        next_maximum_q = max(pred)
+        # Prepare current Q value
+        q = q[action]
 
         # Update the network
-        # print("target.shape: ", target.shape)
-        # print("target: ", target)
+        self.model(state)
         self.optimizer.zero_grad()
-        # print("target: ", target)
-        # loss = self.criterion(target, pred)
-        loss = self.criterion(pred, target)
-        # print("loss: ", loss)
+        loss = self.criterion(next_reward + next_maximum_q, q)
         loss.backward()
         self.optimizer.step()
 
@@ -2002,7 +1966,8 @@ class EmulatedJoystick(Joystick):
         self.neural_network = NeuralNetwork.GetInstatance()
         self.agent = agent
         self.state_values = []
-        self.action_values = []
+        self.q_values = []
+        self.action_value = 0
 
     def Update(self):
         self.position += 1
@@ -2088,7 +2053,7 @@ class EmulatedJoystick(Joystick):
         if (agent_rand.random() > EmulatedJoystick.EPSILON):
             inferred = self.neural_network.Infer(values)
         else:
-            # TODO: Generated random values
+            # TODO: Generate random values
             inferred = [0, 0, 0, 0, 0, 0, 0, 0, 0]
         index = inferred.index(max(inferred))
         self.pressed = 0
@@ -2113,9 +2078,8 @@ class EmulatedJoystick(Joystick):
         self.pressed |= Joystick.A
         self.trigger = (self.pressed ^ self.old) & self.pressed
         self.state_values = values
-        # TODO: Store the index
-        self.action_values = inferred
-        # TODO: Store the Q value
+        self.q_values = inferred
+        self.action_value = index
 
     def GetPressed(self):
         return self.pressed
@@ -2126,8 +2090,11 @@ class EmulatedJoystick(Joystick):
     def GetStateValues(self):
         return self.state_values
 
-    def GetActionValues(self):
-        return self.action_values
+    def GetQValues(self):
+        return self.q_values
+
+    def GetActionValue(self):
+        return self.action_value
 
 
 class Agent:
@@ -2185,27 +2152,10 @@ class Agent:
         else:
             NeuralNetwork.UpdatePrevious()
         loop_count = len(self.experiences) - 1
-        states = []
-        actions = []
-        rewards = []
-        next_states = []
-        dones = []
         for i in range(loop_count):
             experience = self.experiences[i]
-            next_experice = self.experiences[i + 1]
-            states.append(experience[0])
-            actions.append(experience[1])
-            rewards.append(experience[2])
-            next_states.append(next_experice[0])
-            done = experience[3]
-            dones.append(done)
-            if done:
-                self.trainer.Train(states, actions, rewards, next_states, dones)
-                states = []
-                actions = []
-                rewards = []
-                next_states = []
-                dones = []
+            next_experience = self.experiences[i + 1]
+            self.trainer.Train(experience[0], experience[1], experience[2], next_experience[3], next_experience[0])
         self.experiences = []
 
     def AddCurrentReward(self, reward):
@@ -3012,7 +2962,7 @@ class Shooting:
             done = False
             if reward != 0.0:
                 done = True
-            Gss.agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValues(), Gss.agent.GetCurrentReward(), done))
+            Gss.agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), Gss.agent.GetCurrentReward(), done))
             Gss.agent.ClearCurrentReward()
             for star in Shooting.scene.stars:
                 star.Draw(Gss.screen_surface)
