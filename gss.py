@@ -1906,23 +1906,13 @@ class NeuralNetwork(nn.Module):
     def SetScore(self, score):
         self.score = score
 
-    def GetInstatance(cls):
-        if NeuralNetwork.instance == None:
-            NeuralNetwork.instance = NeuralNetwork()
-        return NeuralNetwork.instance
-    GetInstatance = classmethod(GetInstatance)
-
     def GetPrevious(cls):
         return NeuralNetwork.previous
     GetPrevious = classmethod(GetPrevious)
 
-    def UpdatePrevious(cls):
-        NeuralNetwork.previous = copy.deepcopy(NeuralNetwork.instance)
+    def UpdatePrevious(cls, neural_network):
+        NeuralNetwork.previous = copy.deepcopy(neural_network)
     UpdatePrevious = classmethod(UpdatePrevious)
-
-    def RollbackFromPrevious(cls):
-        NeuralNetwork.instance = copy.deepcopy(NeuralNetwork.previous)
-    RollbackFromPrevious = classmethod(RollbackFromPrevious)
 
 
 class Trainer:
@@ -1999,8 +1989,8 @@ class EmulatedJoystick(Joystick):
         super().__init__()
         self.position = -1
         self.shooting = shooting
-        self.neural_network = NeuralNetwork.GetInstatance()
         self.agent = agent
+        self.neural_network = agent.GetNeuralNetwork()
         self.state_values = []
         self.q_values = []
         self.action_value = 0
@@ -2137,15 +2127,13 @@ class Agent:
     MUTATION_RATE = 0.5
 
     def __init__(self):
-        self.genes = []
-        for i in range(NeuralNetwork.GENE_COUNT):
-            self.genes.append(agent_rand.random() * 2.0 - 1.0)
+        self.neural_network = NeuralNetwork()
         self.score = 0
         self.destruction_score = 0
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(NeuralNetwork.GetInstatance(), 0.001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.001, 0.9)
         self.current_reward = 0.0
 
     def Clone(self):
@@ -2165,7 +2153,6 @@ class Agent:
         self.TrainLongMemory()
 
     def TrainShortMemory(self):
-        neural_network = NeuralNetwork.GetInstatance()
         loop_count = len(self.experiences) - 1
         for i in range(loop_count):
             experience = self.experiences[i]
@@ -2174,18 +2161,16 @@ class Agent:
         self.experiences = []
 
     def TrainLongMemory(self):
-        neural_network = NeuralNetwork.GetInstatance()
-        neural_network.SetScore(self.score)
+        self.neural_network.SetScore(self.score)
         previous_neural_network = NeuralNetwork.GetPrevious()
         print("Current score: ", self.score)
         if previous_neural_network != None:
             print("Previous score: ", previous_neural_network.GetScore())
         if previous_neural_network != None and self.score < previous_neural_network.GetScore():
             print("Neural network rollbacked.")
-            NeuralNetwork.RollbackFromPrevious()
-            neural_network = NeuralNetwork.GetInstatance()
+            self.neural_network = copy.deepcopy(NeuralNetwork.GetPrevious())
         else:
-            NeuralNetwork.UpdatePrevious()
+            NeuralNetwork.UpdatePrevious(self.neural_network)
             # TODO: Serialize the neural network
             loop_count = len(self.experiences) - 1
             a_indices = []
@@ -2265,6 +2250,9 @@ class Agent:
     def SetEventScore(self, event_score):
         self.event_score = event_score
 
+    def GetNeuralNetwork(self):
+        return self.neural_network
+
     def GetAlternated(cls, agents):
         elites = []
         scores = []
@@ -2304,11 +2292,11 @@ class Agent:
     def Load(cls, filename):
         with open(filename, "rb") as file:
             saved = pickle.load(file)
-        return saved["agents"], saved["generation"]
+        return saved["agent"], saved["generation"]
     Load = classmethod(Load)
 
-    def Save(cls, agents, generation, filename):
-        saving = {"generation": generation, "agents": agents}
+    def Save(cls, agent, generation, filename):
+        saving = {"generation": generation, "agent": agent}
         with open(filename, "wb") as file:
             pickle.dump(saving, file)
     Save = classmethod(Save)
@@ -2328,7 +2316,7 @@ class Gss:
     settings = None
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-    def __init__(self, settings):
+    def __init__(self, agent, generation, settings):
         pygame.init()
         Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         pygame.mouse.set_visible(1)
@@ -2337,7 +2325,12 @@ class Gss:
         Gss.joystick = Joystick()
         Gss.data = Data()
         Gss.settings = settings
-        Gss.agent = Agent()
+        if agent == None:
+            self.generation = 1
+            Gss.agent = Agent()
+        else:
+            self.generation = generation
+            Gss.agent = agent
 
     def Main(self):
         Status.UpdateScales()
@@ -2357,9 +2350,11 @@ class Gss:
             Gss.agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
             Gss.agent.SetEventScore(event_score)
-            print("Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(score, destruction_score, frame_score, event_score))
+            print("Generation: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             Gss.agent.Train()
+            self.generation += 1
+            Agent.Save(Gss.agent, self.generation, "gen{}.pickle".format(self.generation))
 
 
 class LogoPart(Actor):
@@ -3063,6 +3058,8 @@ class Shooting:
 
 
 if __name__ == "__main__":
+    agent = None
+    generation = 0
     settings = Settings()
     for argument in enumerate(sys.argv):
         if argument[0] > 0:
@@ -3072,4 +3069,6 @@ if __name__ == "__main__":
                         settings.SetNoWait(True)
                     elif character == "s":
                         settings.SetSilent(True)
-    Gss(settings).Main()
+            else:
+                agent, generation = Agent.Load(argument[1])
+    Gss(agent, generation, settings).Main()
