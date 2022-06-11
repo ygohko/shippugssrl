@@ -1743,14 +1743,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agent.AddCurrentReward(-1.0)
+                Gss.agent.AddCurrentReward(-0.2)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agent.AddCurrentReward(-1.0)
+                Gss.agent.AddCurrentReward(-0.2)
 
 
 class EventParser:
@@ -1931,7 +1931,7 @@ class Trainer:
         self.gamma = gamma
         self.model = model
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.SmoothL1Loss()
 
     def Train(self, state, q, action, next_reward, next_state):
         # TODO: Update arguments
@@ -1970,13 +1970,22 @@ class Trainer:
         a = torch.tensor(a, dtype=torch.float)
         a = torch.unsqueeze(a, 0)
         b = next_reward + self.gamma * next_maximum_q
-        b = [b, b, b, b, b, b, b, b, b]
-        b = torch.tensor(b, dtype=torch.float)
-        b = torch.unsqueeze(b, 0)
+        target = []
+        for i in range(9):
+            if i == action:
+                target.append(b)
+            else:
+                target.append(output[0][i])
+        target = torch.tensor(target, dtype=torch.float)
+        target = torch.unsqueeze(target, 0)
+        # print("target:", target)
+        # b = [b, b, b, b, b, b, b, b, b]
+        # b = torch.tensor(b, dtype=torch.float)
+        # b = torch.unsqueeze(b, 0)
         # print("next_reward: ", next_reward)
         # print("next_maximum_q: ", next_maximum_q)
         # print("b: ", b)
-        loss = self.criterion(output, b)
+        loss = self.criterion(output, target)
         # print(loss)
         loss.backward()
         self.optimizer.step()
@@ -1984,7 +1993,7 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.01
+    EPSILON = 0.1
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2177,14 +2186,24 @@ class Agent:
             neural_network = NeuralNetwork.GetInstatance()
         else:
             NeuralNetwork.UpdatePrevious()
-        loop_count = len(self.experiences) - 1
-        for i in range(loop_count):
-            experience = self.experiences[i]
-            next_experience = self.experiences[i + 1]
-            self.trainer.Train(experience[0], experience[1], experience[2], next_experience[3], next_experience[0])
+            # TODO: Serialize the neural network
+            loop_count = len(self.experiences) - 1
+            a_indices = []
+            for i in range(loop_count):
+                a_indices.append(i)
+            indices = []
+            for i in range(loop_count):
+                index = a_indices[agent_rand.randrange(len(a_indices))]
+                a_indices.remove(index)
+                indices.append(index)
+            for i in indices:
+                experience = self.experiences[i]
+                next_experience = self.experiences[i + 1]
+                self.trainer.Train(experience[0], experience[1], experience[2], next_experience[3], next_experience[0])
         self.experiences = []
 
     def AddCurrentReward(self, reward):
+        # TODO: Rename this
         # self.current_reward += reward
         self.current_reward = reward
 
