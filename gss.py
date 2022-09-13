@@ -2953,13 +2953,14 @@ class Shooting:
     scene = None
 
     def __init__(self):
-        pygame.mixer.music.load("shippu.ogg")
+        # pygame.mixer.music.load("shippu.ogg")
         Shooting.scene = Scene()
         self.gen = self.Move()
 
     def MainLoop(self):
         if not Gss.settings.GetSilent():
-            pygame.mixer.music.play(-1)
+            pass
+            # pygame.mixer.music.play(-1)
         event_parser = EventParser(test_events)
 
         state = Shooting.STATE_CONTINUE
