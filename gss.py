@@ -2163,15 +2163,16 @@ class Agent:
 
     def TrainLongMemory(self):
         self.neural_network.SetScore(self.score)
-        previous_neural_network = NeuralNetwork.GetPrevious()
+        # previous_neural_network = NeuralNetwork.GetPrevious()
         print("Current score: ", self.score)
-        if previous_neural_network != None:
-            print("Previous score: ", previous_neural_network.GetScore())
-        if previous_neural_network != None and self.score < previous_neural_network.GetScore():
-            print("Neural network rollbacked.")
-            self.neural_network = copy.deepcopy(NeuralNetwork.GetPrevious())
+        # if previous_neural_network != None:
+        #     print("Previous score: ", previous_neural_network.GetScore())
+        if False: # previous_neural_network != None and self.score < previous_neural_network.GetScore():
+            pass
+        #     print("Neural network rollbacked.")
+        #     self.neural_network = copy.deepcopy(NeuralNetwork.GetPrevious())
         else:
-            NeuralNetwork.UpdatePrevious(self.neural_network)
+            # NeuralNetwork.UpdatePrevious(self.neural_network)
             # TODO: Serialize the neural network
             loop_count = len(self.experiences) - 1
             a_indices = []
