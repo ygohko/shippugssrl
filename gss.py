@@ -247,6 +247,7 @@ class Player(Actor):
     def Move(self):
         shot_cnt = 0
         living_cnt = 0
+        agent = Gss.agents[Gss.agent_index]
         while True:
             pressed = Gss.joystick.GetPressed()
             if pressed & Joystick.RIGHT:
@@ -261,13 +262,13 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                Gss.agent.AddCurrentReward(-1.0)
+                agent.AddCurrentReward(-1.0)
                 Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(160):
                 living_cnt = 0
             if living_cnt >= 30:
-                Gss.agent.AddCurrentReward(1.0)
+                agent.AddCurrentReward(1.0)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1735,7 +1736,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agent.AddCurrentReward(1.0)
+                    Gss.agents[Gss.agent_index].AddCurrentReward(1.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1743,14 +1744,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agent.AddCurrentReward(-0.2)
+                Gss.agents[Gss.agent_index].AddCurrentReward(-0.2)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agent.AddCurrentReward(-0.2)
+                Gss.agents[Gss.agent_index].AddCurrentReward(-0.2)
 
 
 class EventParser:
@@ -2310,10 +2311,14 @@ class Agent:
 
 
 class Gss:
+    AGENT_NUM = 10
+
     screen_surface = None
     joystick = None
     data = None
     settings = None
+    agents = []
+    agent_index = 0
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
     def __init__(self, agent, generation, settings):
@@ -2327,10 +2332,13 @@ class Gss:
         Gss.settings = settings
         if agent == None:
             self.generation = 1
-            Gss.agent = Agent()
+            for i in range(Gss.AGENT_NUM):
+                Gss.agents.append(Agent())
         else:
             self.generation = generation
-            Gss.agent = agent
+            for i in range(Gss.AGENT_NUM):
+                Gss.agents.append(agent)
+        Gss.agent_index = 0
 
     def Main(self):
         Status.UpdateScales()
@@ -2340,21 +2348,26 @@ class Gss:
             enemy_rand.seed(123)
             effect_rand.seed(456)
             shooting = Shooting()
-            Gss.joystick = EmulatedJoystick(shooting, Gss.agent)
+            agent = Gss.agents[Gss.agent_index]
+            Gss.joystick = EmulatedJoystick(shooting, agent)
             shooting.MainLoop()
             score = shooting.scene.status.agent_score
-            Gss.agent.SetScore(score)
+            agent.SetScore(score)
             destruction_score = shooting.scene.status.agent_destruction_score
-            Gss.agent.SetDestructionScore(destruction_score)
+            agent.SetDestructionScore(destruction_score)
             frame_score = shooting.scene.status.agent_frame_score
-            Gss.agent.SetFrameScore(frame_score)
+            agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
-            Gss.agent.SetEventScore(event_score)
-            print("Generation: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, score, destruction_score, frame_score, event_score))
+            agent.SetEventScore(event_score)
+            print("Generation: {}, Agent: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
-            Gss.agent.Train()
-            self.generation += 1
-            Agent.Save(Gss.agent, self.generation, "gen{}.pickle".format(self.generation))
+            agent.Train()
+            Gss.agent_index += 1
+            if Gss.agent_index >= Gss.AGENT_NUM:
+                Gss.agent_index = 0
+                self.generation += 1
+                # TODO: Serialize agents
+                # Agent.Save(Gss.agent, self.generation, "gen{}.pickle".format(self.generation))
 
 
 class LogoPart(Actor):
@@ -2999,12 +3012,13 @@ class Shooting:
             Shooting.scene.CheckBulletPlayerCollision()
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
-            reward = Gss.agent.GetCurrentReward()
+            agent = Gss.agents[Gss.agent_index]
+            reward = agent.GetCurrentReward()
             done = False
             if reward != 0.0:
                 done = True
-            Gss.agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), Gss.agent.GetCurrentReward(), done))
-            Gss.agent.ClearCurrentReward()
+            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward(), done))
+            agent.ClearCurrentReward()
             for star in Shooting.scene.stars:
                 star.Draw(Gss.screen_surface)
             for beam in Shooting.scene.beams:
