@@ -1901,6 +1901,13 @@ class NeuralNetwork(nn.Module):
         # print("results:", results);
         return results
 
+    def Cross(self, neural_network, mutation_rate):
+        NeuralNetwork.CrossModule(self.linear1, neural_network.linear1, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear2, neural_network.linear2, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear3, neural_network.linear3, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear4, neural_network.linear4, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear5, neural_network.linear5, mutation_rate)
+
     def GetScore(self):
         return self.score
 
@@ -1915,6 +1922,21 @@ class NeuralNetwork(nn.Module):
         NeuralNetwork.previous = copy.deepcopy(neural_network)
     UpdatePrevious = classmethod(UpdatePrevious)
 
+    def CrossModule(a_module, b_module, mutation_rate):
+        a_data = a_module.weight.data
+        b_data = b_module.weight.data
+        size = a_data.size()
+        row_count = size[0]
+        column_count = size[0]
+        for i in range(row_count):
+            for j in range(column_count):
+                if agent_rand.random() < mutation_rate:
+                    a_data[i, j] = agent_rand.random() * 2.0 - 1.0
+                    b_data[i, j] = agent_rand.random() * 2.0 - 1.0
+                elif agent_rand.randrange(2) == 1:
+                    value = a_data[i, j]
+                    a_data[i, j] = b_data[i, j]
+                    b_data[i, j] = value
 
 class Trainer:
     def __init__(self, model, lr, gamma):
@@ -2139,12 +2161,12 @@ class Agent:
 
     def Clone(self):
         agent = Agent()
-        agent.genes = self.genes[:]
+        agent.neural_network = copy.deepcopy(self.neural_network)
         agent.score = self.score
         agent.destruction_score = self.destruction_score
         agent.frame_score = self.frame_score
         agent.event_score = self.event_score
-        agant.experiences = self.experiences[:]
+        agent.experiences = self.experiences[:]
         return agent
 
     def Remember(self, experience):
@@ -2201,14 +2223,7 @@ class Agent:
         self.current_reward = 0.0
 
     def Cross(self, agent):
-        for i in range(len(self.genes)):
-            if agent_rand.random() <= Agent.MUTATION_RATE * 0.01:
-                self.genes[i] = agent_rand.random() * 2.0 - 1.0
-                agent.genes[i] = agent_rand.random() * 2.0 - 1.0
-            if agent_rand.randrange(2) == 1:
-                value = self.genes[i]
-                self.genes[i] = agent.genes[i]
-                agent.genes[i] = value
+        self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE * 0.01)
 
     def CrossWithBCXAlpha(self, agent):
         for i in range(len(self.genes)):
@@ -2256,38 +2271,21 @@ class Agent:
         return self.neural_network
 
     def GetAlternated(cls, agents):
-        elites = []
+        elite = None
         scores = []
         for agent in agents:
             score = agent.GetScore()
             scores.append(score)
         sorted_scores = sorted(scores, reverse=True)
         new_agents = []
-        for i in range(2):
-            agent = Agent.GetFromScore(agents, sorted_scores[i])
-            elites.append(agent)
+        agent = Agent.GetFromScore(agents, sorted_scores[0])
+        elite = agent
+        new_agents.append(agent)
+        for i in range(9):
+            score = sorted_scores[i + 1]
+            agent = Agent.GetFromScore(agents, score).Clone()
+            agent.Cross(elite)
             new_agents.append(agent)
-        for i in range(4):
-            score = sorted_scores[i + 2]
-            for j in range(2):
-                elite = elites[j].Clone()
-                agent = Agent.GetFromScore(agents, score).Clone()
-                agent.Cross(elite)
-                new_agents.append(agent)
-                elite = elites[j].Clone()
-                agent = Agent.GetFromScore(agents, score).Clone()
-                agent.CrossWithBCXAlpha(elite)
-                new_agents.append(agent)
-        a_index = agent_rand.randrange(len(agents))
-        b_index = agent_rand.randrange(len(agents))
-        a_agent = agents[a_index].Clone()
-        b_agent = agents[b_index].Clone()
-        b_agent.Cross(a_agent)
-        new_agents.append(b_agent)
-        a_agent = agents[a_index].Clone()
-        b_agent = agents[b_index].Clone()
-        b_agent.CrossWithBCXAlpha(a_agent)
-        new_agents.append(b_agent)
         return new_agents
     GetAlternated = classmethod(GetAlternated)
 
@@ -2365,6 +2363,7 @@ class Gss:
             agent.Train()
             Gss.agent_index += 1
             if Gss.agent_index >= Gss.AGENT_NUM:
+                Gss.agents = Agent.GetAlternated(Gss.agents)
                 Gss.agent_index = 0
                 self.generation += 1
                 # TODO: Serialize agents
