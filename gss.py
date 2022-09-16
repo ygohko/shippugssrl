@@ -2101,7 +2101,7 @@ class EmulatedJoystick(Joystick):
         values[27] = value
         inferred = self.neural_network.Infer(values)
         self.q_values = inferred
-        if (agent_rand.random() < EmulatedJoystick.EPSILON):
+        if False: #agent_rand.random() < EmulatedJoystick.EPSILON:
             inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             inferred[random.randrange(9)] = 1.0
         index = inferred.index(max(inferred))
@@ -2156,7 +2156,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.0001, 0.9)
         self.current_reward = 0.0
 
     def Clone(self):
@@ -2186,7 +2186,7 @@ class Agent:
     def TrainLongMemory(self):
         self.neural_network.SetScore(self.score)
         # previous_neural_network = NeuralNetwork.GetPrevious()
-        print("Current score: ", self.score)
+        # print("Current score: ", self.score)
         # if previous_neural_network != None:
         #     print("Previous score: ", previous_neural_network.GetScore())
         if False: # previous_neural_network != None and self.score < previous_neural_network.GetScore():
@@ -2209,6 +2209,9 @@ class Agent:
                 experience = self.experiences[i]
                 next_experience = self.experiences[i + 1]
                 self.trainer.Train(experience[0], experience[1], experience[2], next_experience[3], next_experience[0])
+        self.experiences = []
+
+    def ClearExperiences(self):
         self.experiences = []
 
     def AddCurrentReward(self, reward):
@@ -2284,7 +2287,7 @@ class Agent:
         for i in range(9):
             score = sorted_scores[i + 1]
             agent = Agent.GetFromScore(agents, score).Clone()
-            agent.Cross(elite)
+            agent.Cross(elite.Clone())
             new_agents.append(agent)
         return new_agents
     GetAlternated = classmethod(GetAlternated)
@@ -2341,6 +2344,8 @@ class Gss:
 
     def Main(self):
         Status.UpdateScales()
+        high_score = -1
+        high_score_index = -1
         while True:
             if Title().MainLoop() == Title.STATE_EXIT_QUIT:
                 return
@@ -2352,6 +2357,9 @@ class Gss:
             shooting.MainLoop()
             score = shooting.scene.status.agent_score
             agent.SetScore(score)
+            if score > high_score:
+                high_score = score
+                high_score_index = Gss.agent_index
             destruction_score = shooting.scene.status.agent_destruction_score
             agent.SetDestructionScore(destruction_score)
             frame_score = shooting.scene.status.agent_frame_score
@@ -2360,11 +2368,16 @@ class Gss:
             agent.SetEventScore(event_score)
             print("Generation: {}, Agent: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
-            agent.Train()
             Gss.agent_index += 1
             if Gss.agent_index >= Gss.AGENT_NUM:
+                for i in range(len(Gss.agents)):
+                    if i != high_score_index:
+                        Gss.agents[i].Train()
+                    Gss.agents[i].ClearExperiences()
                 Gss.agents = Agent.GetAlternated(Gss.agents)
                 Gss.agent_index = 0
+                high_score = -1
+                high_score_index = -1
                 self.generation += 1
                 # TODO: Serialize agents
                 # Agent.Save(Gss.agent, self.generation, "gen{}.pickle".format(self.generation))
