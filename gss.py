@@ -268,7 +268,7 @@ class Player(Actor):
             if self.x > Fixed(160):
                 living_cnt = 0
             if living_cnt >= 30:
-                agent.AddCurrentReward(1.0)
+                # agent.AddCurrentReward(0.1)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1934,8 +1934,8 @@ class NeuralNetwork(nn.Module):
                     a_data[i, j] = agent_rand.random() * 2.0 - 1.0
                     b_data[i, j] = agent_rand.random() * 2.0 - 1.0
                 elif agent_rand.randrange(2) == 1:
-                    value = a_data[i, j]
-                    a_data[i, j] = b_data[i, j]
+                    value = float(a_data[i, j])
+                    a_data[i, j] = float(b_data[i, j])
                     b_data[i, j] = value
 
 class Trainer:
@@ -2006,7 +2006,7 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.1
+    EPSILON = 0.0
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2101,7 +2101,7 @@ class EmulatedJoystick(Joystick):
         values[27] = value
         inferred = self.neural_network.Infer(values)
         self.q_values = inferred
-        if False: #agent_rand.random() < EmulatedJoystick.EPSILON:
+        if agent_rand.random() < EmulatedJoystick.EPSILON:
             inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             inferred[random.randrange(9)] = 1.0
         index = inferred.index(max(inferred))
@@ -2147,7 +2147,7 @@ class EmulatedJoystick(Joystick):
 
 class Agent:
     ALPHA = 0.2
-    MUTATION_RATE = 0.0
+    MUTATION_RATE = 0.1 * 0.01
 
     def __init__(self):
         self.neural_network = NeuralNetwork()
@@ -2226,7 +2226,7 @@ class Agent:
         self.current_reward = 0.0
 
     def Cross(self, agent):
-        self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE * 0.01)
+        self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE)
 
     def CrossWithBCXAlpha(self, agent):
         for i in range(len(self.genes)):
@@ -2284,11 +2284,14 @@ class Agent:
         agent = Agent.GetFromScore(agents, sorted_scores[0])
         elite = agent
         new_agents.append(agent)
-        for i in range(9):
+        for i in range(4):
             score = sorted_scores[i + 1]
             agent = Agent.GetFromScore(agents, score).Clone()
-            agent.Cross(elite.Clone())
+            a_agent = elite.Clone()
+            agent.Cross(a_agent)
             new_agents.append(agent)
+            new_agents.append(a_agent)
+        new_agents.append(Agent())
         return new_agents
     GetAlternated = classmethod(GetAlternated)
 
