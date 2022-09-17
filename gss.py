@@ -2156,7 +2156,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.0001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.001, 0.9)
         self.current_reward = 0.0
 
     def Clone(self):
@@ -2298,11 +2298,11 @@ class Agent:
     def Load(cls, filename):
         with open(filename, "rb") as file:
             saved = pickle.load(file)
-        return saved["agent"], saved["generation"]
+        return saved["agents"], saved["generation"]
     Load = classmethod(Load)
 
-    def Save(cls, agent, generation, filename):
-        saving = {"generation": generation, "agent": agent}
+    def Save(cls, agents, generation, filename):
+        saving = {"generation": generation, "agents": agents}
         with open(filename, "wb") as file:
             pickle.dump(saving, file)
     Save = classmethod(Save)
@@ -2326,7 +2326,7 @@ class Gss:
     agent_index = 0
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-    def __init__(self, agent, generation, settings):
+    def __init__(self, agents, generation, settings):
         pygame.init()
         Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         pygame.mouse.set_visible(1)
@@ -2335,13 +2335,13 @@ class Gss:
         Gss.joystick = Joystick()
         Gss.data = Data()
         Gss.settings = settings
-        if agent == None:
+        if agents == None:
             self.generation = 1
             for i in range(Gss.AGENT_NUM):
                 Gss.agents.append(Agent())
         else:
             self.generation = generation
-            for i in range(Gss.AGENT_NUM):
+            for agent in agents:
                 Gss.agents.append(agent)
         Gss.agent_index = 0
 
@@ -2382,8 +2382,7 @@ class Gss:
                 high_score = -1
                 high_score_index = -1
                 self.generation += 1
-                # TODO: Serialize agents
-                # Agent.Save(Gss.agent, self.generation, "gen{}.pickle".format(self.generation))
+                Agent.Save(Gss.agents, self.generation, "gen{}.pickle".format(self.generation))
 
 
 class LogoPart(Actor):
@@ -3089,7 +3088,7 @@ class Shooting:
 
 
 if __name__ == "__main__":
-    agent = None
+    agents = None
     generation = 0
     settings = Settings()
     for argument in enumerate(sys.argv):
@@ -3101,5 +3100,5 @@ if __name__ == "__main__":
                     elif character == "s":
                         settings.SetSilent(True)
             else:
-                agent, generation = Agent.Load(argument[1])
-    Gss(agent, generation, settings).Main()
+                agents, generation = Agent.Load(argument[1])
+    Gss(agents, generation, settings).Main()
