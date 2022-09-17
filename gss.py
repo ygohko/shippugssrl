@@ -2147,7 +2147,7 @@ class EmulatedJoystick(Joystick):
 
 class Agent:
     ALPHA = 0.2
-    MUTATION_RATE = 0.5
+    MUTATION_RATE = 0.0
 
     def __init__(self):
         self.neural_network = NeuralNetwork()
