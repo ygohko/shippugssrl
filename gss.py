@@ -2006,7 +2006,7 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.0
+    EPSILON = 0.1
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2014,6 +2014,8 @@ class EmulatedJoystick(Joystick):
         self.shooting = shooting
         self.agent = agent
         self.neural_network = agent.GetNeuralNetwork()
+        self.rand = random.Random()
+        self.rand.seed(agent.GetEpsilonSeed())
         self.state_values = []
         self.q_values = []
         self.action_value = 0
@@ -2101,9 +2103,9 @@ class EmulatedJoystick(Joystick):
         values[27] = value
         inferred = self.neural_network.Infer(values)
         self.q_values = inferred
-        if agent_rand.random() < EmulatedJoystick.EPSILON:
+        if self.rand.random() < EmulatedJoystick.EPSILON:
             inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            inferred[random.randrange(9)] = 1.0
+            inferred[self.rand.randrange(9)] = 1.0
         index = inferred.index(max(inferred))
         self.pressed = 0
         if index == 0:
@@ -2147,10 +2149,11 @@ class EmulatedJoystick(Joystick):
 
 class Agent:
     ALPHA = 0.2
-    MUTATION_RATE = 0.1 * 0.01
+    MUTATION_RATE = 0.0 * 0.01
 
     def __init__(self):
         self.neural_network = NeuralNetwork()
+        self.epsilon_seed = agent_rand.randrange(65535)
         self.score = 0
         self.destruction_score = 0
         self.frame_score = 0
@@ -2273,6 +2276,12 @@ class Agent:
     def GetNeuralNetwork(self):
         return self.neural_network
 
+    def GetEpsilonSeed(self):
+        return self.epsilon_seed
+
+    def UpdateEpsilonSeed(self):
+        self.epsilon_seed = agent_rand.randrange(65535)
+
     def GetAlternated(cls, agents):
         elite = None
         scores = []
@@ -2289,6 +2298,8 @@ class Agent:
             agent = Agent.GetFromScore(agents, score).Clone()
             a_agent = elite.Clone()
             agent.Cross(a_agent)
+            agent.UpdateEpsilonSeed()
+            a_agent.UpdateEpsilonSeed()
             new_agents.append(agent)
             new_agents.append(a_agent)
         new_agents.append(Agent())
