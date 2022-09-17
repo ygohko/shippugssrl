@@ -247,6 +247,7 @@ class Player(Actor):
     def Move(self):
         shot_cnt = 0
         living_cnt = 0
+        agent = Gss.agents[Gss.agent_index]
         while True:
             pressed = Gss.joystick.GetPressed()
             if pressed & Joystick.RIGHT:
@@ -261,13 +262,13 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                Gss.agent.AddCurrentReward(-1.0)
+                agent.AddCurrentReward(-1.0)
                 Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(160):
                 living_cnt = 0
             if living_cnt >= 30:
-                Gss.agent.AddCurrentReward(1.0)
+                # agent.AddCurrentReward(0.1)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1735,7 +1736,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agent.AddCurrentReward(1.0)
+                    Gss.agents[Gss.agent_index].AddCurrentReward(1.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1743,14 +1744,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agent.AddCurrentReward(-0.2)
+                Gss.agents[Gss.agent_index].AddCurrentReward(-0.2)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agent.AddCurrentReward(-0.2)
+                Gss.agents[Gss.agent_index].AddCurrentReward(-0.2)
 
 
 class EventParser:
@@ -1900,6 +1901,13 @@ class NeuralNetwork(nn.Module):
         # print("results:", results);
         return results
 
+    def Cross(self, neural_network, mutation_rate):
+        NeuralNetwork.CrossModule(self.linear1, neural_network.linear1, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear2, neural_network.linear2, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear3, neural_network.linear3, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear4, neural_network.linear4, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear5, neural_network.linear5, mutation_rate)
+
     def GetScore(self):
         return self.score
 
@@ -1914,6 +1922,21 @@ class NeuralNetwork(nn.Module):
         NeuralNetwork.previous = copy.deepcopy(neural_network)
     UpdatePrevious = classmethod(UpdatePrevious)
 
+    def CrossModule(a_module, b_module, mutation_rate):
+        a_data = a_module.weight.data
+        b_data = b_module.weight.data
+        size = a_data.size()
+        row_count = size[0]
+        column_count = size[0]
+        for i in range(row_count):
+            for j in range(column_count):
+                if agent_rand.random() < mutation_rate:
+                    a_data[i, j] = agent_rand.random() * 2.0 - 1.0
+                    b_data[i, j] = agent_rand.random() * 2.0 - 1.0
+                elif agent_rand.randrange(2) == 1:
+                    value = float(a_data[i, j])
+                    a_data[i, j] = float(b_data[i, j])
+                    b_data[i, j] = value
 
 class Trainer:
     def __init__(self, model, lr, gamma):
@@ -1991,6 +2014,8 @@ class EmulatedJoystick(Joystick):
         self.shooting = shooting
         self.agent = agent
         self.neural_network = agent.GetNeuralNetwork()
+        self.rand = random.Random()
+        self.rand.seed(agent.GetEpsilonSeed())
         self.state_values = []
         self.q_values = []
         self.action_value = 0
@@ -2078,9 +2103,9 @@ class EmulatedJoystick(Joystick):
         values[27] = value
         inferred = self.neural_network.Infer(values)
         self.q_values = inferred
-        if (agent_rand.random() < EmulatedJoystick.EPSILON):
+        if self.rand.random() < EmulatedJoystick.EPSILON:
             inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            inferred[random.randrange(9)] = 1.0
+            inferred[self.rand.randrange(9)] = 1.0
         index = inferred.index(max(inferred))
         self.pressed = 0
         if index == 0:
@@ -2124,10 +2149,11 @@ class EmulatedJoystick(Joystick):
 
 class Agent:
     ALPHA = 0.2
-    MUTATION_RATE = 0.5
+    MUTATION_RATE = 0.0 * 0.01
 
     def __init__(self):
         self.neural_network = NeuralNetwork()
+        self.epsilon_seed = agent_rand.randrange(65535)
         self.score = 0
         self.destruction_score = 0
         self.frame_score = 0
@@ -2138,12 +2164,12 @@ class Agent:
 
     def Clone(self):
         agent = Agent()
-        agent.genes = self.genes[:]
+        agent.neural_network = copy.deepcopy(self.neural_network)
         agent.score = self.score
         agent.destruction_score = self.destruction_score
         agent.frame_score = self.frame_score
         agent.event_score = self.event_score
-        agant.experiences = self.experiences[:]
+        agent.experiences = self.experiences[:]
         return agent
 
     def Remember(self, experience):
@@ -2162,15 +2188,16 @@ class Agent:
 
     def TrainLongMemory(self):
         self.neural_network.SetScore(self.score)
-        previous_neural_network = NeuralNetwork.GetPrevious()
-        print("Current score: ", self.score)
-        if previous_neural_network != None:
-            print("Previous score: ", previous_neural_network.GetScore())
-        if previous_neural_network != None and self.score < previous_neural_network.GetScore():
-            print("Neural network rollbacked.")
-            self.neural_network = copy.deepcopy(NeuralNetwork.GetPrevious())
+        # previous_neural_network = NeuralNetwork.GetPrevious()
+        # print("Current score: ", self.score)
+        # if previous_neural_network != None:
+        #     print("Previous score: ", previous_neural_network.GetScore())
+        if False: # previous_neural_network != None and self.score < previous_neural_network.GetScore():
+            pass
+        #     print("Neural network rollbacked.")
+        #     self.neural_network = copy.deepcopy(NeuralNetwork.GetPrevious())
         else:
-            NeuralNetwork.UpdatePrevious(self.neural_network)
+            # NeuralNetwork.UpdatePrevious(self.neural_network)
             # TODO: Serialize the neural network
             loop_count = len(self.experiences) - 1
             a_indices = []
@@ -2187,6 +2214,9 @@ class Agent:
                 self.trainer.Train(experience[0], experience[1], experience[2], next_experience[3], next_experience[0])
         self.experiences = []
 
+    def ClearExperiences(self):
+        self.experiences = []
+
     def AddCurrentReward(self, reward):
         # TODO: Rename this
         # self.current_reward += reward
@@ -2199,14 +2229,7 @@ class Agent:
         self.current_reward = 0.0
 
     def Cross(self, agent):
-        for i in range(len(self.genes)):
-            if agent_rand.random() <= Agent.MUTATION_RATE * 0.01:
-                self.genes[i] = agent_rand.random() * 2.0 - 1.0
-                agent.genes[i] = agent_rand.random() * 2.0 - 1.0
-            if agent_rand.randrange(2) == 1:
-                value = self.genes[i]
-                self.genes[i] = agent.genes[i]
-                agent.genes[i] = value
+        self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE)
 
     def CrossWithBCXAlpha(self, agent):
         for i in range(len(self.genes)):
@@ -2253,50 +2276,44 @@ class Agent:
     def GetNeuralNetwork(self):
         return self.neural_network
 
+    def GetEpsilonSeed(self):
+        return self.epsilon_seed
+
+    def UpdateEpsilonSeed(self):
+        self.epsilon_seed = agent_rand.randrange(65535)
+
     def GetAlternated(cls, agents):
-        elites = []
+        elite = None
         scores = []
         for agent in agents:
             score = agent.GetScore()
             scores.append(score)
         sorted_scores = sorted(scores, reverse=True)
         new_agents = []
-        for i in range(2):
-            agent = Agent.GetFromScore(agents, sorted_scores[i])
-            elites.append(agent)
-            new_agents.append(agent)
+        agent = Agent.GetFromScore(agents, sorted_scores[0])
+        elite = agent
+        new_agents.append(agent)
         for i in range(4):
-            score = sorted_scores[i + 2]
-            for j in range(2):
-                elite = elites[j].Clone()
-                agent = Agent.GetFromScore(agents, score).Clone()
-                agent.Cross(elite)
-                new_agents.append(agent)
-                elite = elites[j].Clone()
-                agent = Agent.GetFromScore(agents, score).Clone()
-                agent.CrossWithBCXAlpha(elite)
-                new_agents.append(agent)
-        a_index = agent_rand.randrange(len(agents))
-        b_index = agent_rand.randrange(len(agents))
-        a_agent = agents[a_index].Clone()
-        b_agent = agents[b_index].Clone()
-        b_agent.Cross(a_agent)
-        new_agents.append(b_agent)
-        a_agent = agents[a_index].Clone()
-        b_agent = agents[b_index].Clone()
-        b_agent.CrossWithBCXAlpha(a_agent)
-        new_agents.append(b_agent)
+            score = sorted_scores[i + 1]
+            agent = Agent.GetFromScore(agents, score).Clone()
+            a_agent = elite.Clone()
+            agent.Cross(a_agent)
+            agent.UpdateEpsilonSeed()
+            a_agent.UpdateEpsilonSeed()
+            new_agents.append(agent)
+            new_agents.append(a_agent)
+        new_agents.append(Agent())
         return new_agents
     GetAlternated = classmethod(GetAlternated)
 
     def Load(cls, filename):
         with open(filename, "rb") as file:
             saved = pickle.load(file)
-        return saved["agent"], saved["generation"]
+        return saved["agents"], saved["generation"]
     Load = classmethod(Load)
 
-    def Save(cls, agent, generation, filename):
-        saving = {"generation": generation, "agent": agent}
+    def Save(cls, agents, generation, filename):
+        saving = {"generation": generation, "agents": agents}
         with open(filename, "wb") as file:
             pickle.dump(saving, file)
     Save = classmethod(Save)
@@ -2310,13 +2327,17 @@ class Agent:
 
 
 class Gss:
+    AGENT_NUM = 10
+
     screen_surface = None
     joystick = None
     data = None
     settings = None
+    agents = []
+    agent_index = 0
     best_lap_time = 59 * 60 * 60 + 59 * 60 + 59
 
-    def __init__(self, agent, generation, settings):
+    def __init__(self, agents, generation, settings):
         pygame.init()
         Gss.screen_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.HWSURFACE | pygame.DOUBLEBUF)  # | pygame.FULLSCREEN)
         pygame.mouse.set_visible(1)
@@ -2325,36 +2346,54 @@ class Gss:
         Gss.joystick = Joystick()
         Gss.data = Data()
         Gss.settings = settings
-        if agent == None:
+        if agents == None:
             self.generation = 1
-            Gss.agent = Agent()
+            for i in range(Gss.AGENT_NUM):
+                Gss.agents.append(Agent())
         else:
             self.generation = generation
-            Gss.agent = agent
+            for agent in agents:
+                Gss.agents.append(agent)
+        Gss.agent_index = 0
 
     def Main(self):
         Status.UpdateScales()
+        high_score = -1
+        high_score_index = -1
         while True:
             if Title().MainLoop() == Title.STATE_EXIT_QUIT:
                 return
             enemy_rand.seed(123)
             effect_rand.seed(456)
             shooting = Shooting()
-            Gss.joystick = EmulatedJoystick(shooting, Gss.agent)
+            agent = Gss.agents[Gss.agent_index]
+            Gss.joystick = EmulatedJoystick(shooting, agent)
             shooting.MainLoop()
             score = shooting.scene.status.agent_score
-            Gss.agent.SetScore(score)
+            agent.SetScore(score)
+            if score > high_score:
+                high_score = score
+                high_score_index = Gss.agent_index
             destruction_score = shooting.scene.status.agent_destruction_score
-            Gss.agent.SetDestructionScore(destruction_score)
+            agent.SetDestructionScore(destruction_score)
             frame_score = shooting.scene.status.agent_frame_score
-            Gss.agent.SetFrameScore(frame_score)
+            agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
-            Gss.agent.SetEventScore(event_score)
-            print("Generation: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, score, destruction_score, frame_score, event_score))
+            agent.SetEventScore(event_score)
+            print("Generation: {}, Agent: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
-            Gss.agent.Train()
-            self.generation += 1
-            Agent.Save(Gss.agent, self.generation, "gen{}.pickle".format(self.generation))
+            Gss.agent_index += 1
+            if Gss.agent_index >= Gss.AGENT_NUM:
+                for i in range(len(Gss.agents)):
+                    if i != high_score_index:
+                        Gss.agents[i].Train()
+                    Gss.agents[i].ClearExperiences()
+                Gss.agents = Agent.GetAlternated(Gss.agents)
+                Gss.agent_index = 0
+                high_score = -1
+                high_score_index = -1
+                self.generation += 1
+                Agent.Save(Gss.agents, self.generation, "gen{}.pickle".format(self.generation))
 
 
 class LogoPart(Actor):
@@ -2953,13 +2992,14 @@ class Shooting:
     scene = None
 
     def __init__(self):
-        pygame.mixer.music.load("shippu.ogg")
+        # pygame.mixer.music.load("shippu.ogg")
         Shooting.scene = Scene()
         self.gen = self.Move()
 
     def MainLoop(self):
         if not Gss.settings.GetSilent():
-            pygame.mixer.music.play(-1)
+            pass
+            # pygame.mixer.music.play(-1)
         event_parser = EventParser(test_events)
 
         state = Shooting.STATE_CONTINUE
@@ -2998,12 +3038,13 @@ class Shooting:
             Shooting.scene.CheckBulletPlayerCollision()
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
-            reward = Gss.agent.GetCurrentReward()
+            agent = Gss.agents[Gss.agent_index]
+            reward = agent.GetCurrentReward()
             done = False
             if reward != 0.0:
                 done = True
-            Gss.agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), Gss.agent.GetCurrentReward(), done))
-            Gss.agent.ClearCurrentReward()
+            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward(), done))
+            agent.ClearCurrentReward()
             for star in Shooting.scene.stars:
                 star.Draw(Gss.screen_surface)
             for beam in Shooting.scene.beams:
@@ -3058,7 +3099,7 @@ class Shooting:
 
 
 if __name__ == "__main__":
-    agent = None
+    agents = None
     generation = 0
     settings = Settings()
     for argument in enumerate(sys.argv):
@@ -3070,5 +3111,5 @@ if __name__ == "__main__":
                     elif character == "s":
                         settings.SetSilent(True)
             else:
-                agent, generation = Agent.Load(argument[1])
-    Gss(agent, generation, settings).Main()
+                agents, generation = Agent.Load(argument[1])
+    Gss(agents, generation, settings).Main()
