@@ -2293,16 +2293,21 @@ class Agent:
         agent = Agent.GetFromScore(agents, sorted_scores[0])
         elite = agent
         new_agents.append(agent)
-        for i in range(4):
+        for i in range(6):
             score = sorted_scores[i + 1]
             agent = Agent.GetFromScore(agents, score).Clone()
-            a_agent = elite.Clone()
-            agent.Cross(a_agent)
-            agent.UpdateEpsilonSeed()
-            a_agent.UpdateEpsilonSeed()
+            # a_agent = elite.Clone()
+            # agent.Cross(a_agent)
+            # agent.UpdateEpsilonSeed()
+            # a_agent.UpdateEpsilonSeed()
+            # new_agents.append(agent)
+            # new_agents.append(a_agent)
+            # agent.UpdateEpsilonSeed()
             new_agents.append(agent)
-            new_agents.append(a_agent)
-        new_agents.append(Agent())
+        for i in range(3):
+            agent = elite.Clone()
+            agent.UpdateEpsilonSeed()
+            new_agents.append(agent)
         return new_agents
     GetAlternated = classmethod(GetAlternated)
 
