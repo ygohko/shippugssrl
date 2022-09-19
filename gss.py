@@ -2210,7 +2210,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.0001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.000001, 0.9)
         self.current_reward = 0.0
 
     def Clone(self):
