@@ -2047,7 +2047,7 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.1
+    EPSILON = 0.01
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2202,7 +2202,6 @@ class Agent:
         if neural_network == None:
             self.neural_network = NeuralNetwork()
         else:
-            print("babuabubsubasd")
             self.neural_network = neural_network
         self.epsilon_seed = agent_rand.randrange(65535)
         self.score = 0
@@ -2210,11 +2209,12 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.000001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.000001, 0.1)
         self.current_reward = 0.0
 
     def Clone(self):
         agent = Agent(copy.deepcopy(self.neural_network))
+        agent.epsilon_seed = self.epsilon_seed
         agent.score = self.score
         agent.destruction_score = self.destruction_score
         agent.frame_score = self.frame_score
@@ -2343,8 +2343,8 @@ class Agent:
         elite = agent
         new_agents.append(agent)
         for i in range(6):
-            score = sorted_scores[i + 1]
-            agent = Agent.GetFromScore(agents, score)
+            score = sorted_scores[i]
+            agent = Agent.GetFromScore(agents, score).Clone()
             # a_agent = elite.Clone()
             # agent.Cross(a_agent)
             # agent.UpdateEpsilonSeed()
@@ -2355,7 +2355,7 @@ class Agent:
             new_agents.append(agent)
         for i in range(2):
             agent = elite.Clone()
-            # agent.UpdateEpsilonSeed()
+            agent.UpdateEpsilonSeed()
             new_agents.append(agent)
         new_agents.append(Agent())
         return new_agents
