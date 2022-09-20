@@ -2015,9 +2015,7 @@ class Trainer:
             if i == action:
                 target.append(b)
             else:
-                value = output[0][i]
-                # if value >= 0.0:
-                target.append(value)
+                target.append(output[0][i])
                 # else:
                 #     target.append(0.0)
         # if b < 1.0:
