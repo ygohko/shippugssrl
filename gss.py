@@ -262,13 +262,13 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x and self.x > Fixed(320):
-                agent.AddCurrentReward(-1.0)
+                # agent.UpdateCurrentReward(-1.0)
                 Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(160):
                 living_cnt = 0
             if living_cnt >= 30:
-                # agent.AddCurrentReward(0.1)
+                # agent.UpdateCurrentReward(0.1)
                 living_cnt = 0
             shot_cnt += 1
             shot_cnt &= 3
@@ -1736,7 +1736,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agents[Gss.agent_index].AddCurrentReward(1.0)
+                    Gss.agents[Gss.agent_index].UpdateCurrentReward(2.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1744,14 +1744,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agents[Gss.agent_index].AddCurrentReward(-0.2)
+                Gss.agents[Gss.agent_index].UpdateCurrentReward(0)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agents[Gss.agent_index].AddCurrentReward(-0.2)
+                Gss.agents[Gss.agent_index].UpdateCurrentReward(0)
 
 
 class EventParser:
@@ -1873,15 +1873,15 @@ class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
-        nn.init.uniform_(self.linear1.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear1.weight, -0.7, 0.7)
         self.linear2 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear2.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear2.weight, -0.7, 0.7)
         self.linear3 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear3.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear3.weight, -0.7, 0.7)
         self.linear4 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear4.weight, -0.7, 0.7)
         self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
-        nn.init.uniform_(self.linear5.weight, -1.0, 1.0)
+        nn.init.uniform_(self.linear5.weight, -0.7, 0.7)
         self.score = 0
 
     def forward(self, x):
@@ -1908,6 +1908,21 @@ class NeuralNetwork(nn.Module):
         NeuralNetwork.CrossModule(self.linear4, neural_network.linear4, mutation_rate)
         NeuralNetwork.CrossModule(self.linear5, neural_network.linear5, mutation_rate)
 
+    def Clone(self):
+        neural_network = NeuralNetwork()
+
+        print("babu-", neural_network.linear1.weight[0, 0])
+
+        NeuralNetwork.CopyModule(neural_network.linear1, self.linear1)
+        NeuralNetwork.CopyModule(neural_network.linear2, self.linear2)
+        NeuralNetwork.CopyModule(neural_network.linear3, self.linear3)
+        NeuralNetwork.CopyModule(neural_network.linear4, self.linear4)
+        NeuralNetwork.CopyModule(neural_network.linear5, self.linear5)
+
+        print("ogya---", neural_network.linear1.weight[0, 0])
+
+        return neural_network
+
     def GetScore(self):
         return self.score
 
@@ -1922,12 +1937,12 @@ class NeuralNetwork(nn.Module):
         NeuralNetwork.previous = copy.deepcopy(neural_network)
     UpdatePrevious = classmethod(UpdatePrevious)
 
-    def CrossModule(a_module, b_module, mutation_rate):
+    def CrossModule(cls, a_module, b_module, mutation_rate):
         a_data = a_module.weight.data
         b_data = b_module.weight.data
         size = a_data.size()
         row_count = size[0]
-        column_count = size[0]
+        column_count = size[1]
         for i in range(row_count):
             for j in range(column_count):
                 if agent_rand.random() < mutation_rate:
@@ -1937,6 +1952,18 @@ class NeuralNetwork(nn.Module):
                     value = float(a_data[i, j])
                     a_data[i, j] = float(b_data[i, j])
                     b_data[i, j] = value
+    CrossModule = classmethod(CrossModule)
+
+    def CopyModule(cls, a_module, b_module):
+        a_data = a_module.weight.data
+        b_data = b_module.weight.data
+        size = a_data.size()
+        row_count = size[0]
+        column_count = size[1]
+        for i in range(row_count):
+            for j in range(column_count):
+                a_data[i, j] = float(b_data[i, j])
+    CopyModule = classmethod(CopyModule)
 
 class Trainer:
     def __init__(self, model, lr, gamma):
@@ -1945,6 +1972,7 @@ class Trainer:
         self.model = model
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
         self.criterion = nn.SmoothL1Loss()
+        self.losses = []
 
     def Train(self, state, q, action, next_reward, next_state):
         # TODO: Update arguments
@@ -1978,10 +2006,10 @@ class Trainer:
         # print(dir(output))
         # output.grad_fn = grad_fn
         # print("output:", output)
-        a = q
-        a = [a, a, a, a, a, a, a, a, a]
-        a = torch.tensor(a, dtype=torch.float)
-        a = torch.unsqueeze(a, 0)
+        # a = q
+        # a = [a, a, a, a, a, a, a, a, a]
+        # a = torch.tensor(a, dtype=torch.float)
+        # a = torch.unsqueeze(a, 0)
         b = next_reward + self.gamma * next_maximum_q
         target = []
         for i in range(9):
@@ -1989,6 +2017,18 @@ class Trainer:
                 target.append(b)
             else:
                 target.append(output[0][i])
+                # else:
+                #     target.append(0.0)
+        # if b < 1.0:
+        #     # print("babu: ", action)
+        #     for i in range(9):
+        #         target[i] = 0.0
+
+        # for i in range(9):
+        #     target[i] = 0.0
+        # target[4] = 1.0
+
+
         target = torch.tensor(target, dtype=torch.float)
         target = torch.unsqueeze(target, 0)
         # print("target:", target)
@@ -1999,9 +2039,15 @@ class Trainer:
         # print("next_maximum_q: ", next_maximum_q)
         # print("b: ", b)
         loss = self.criterion(output, target)
-        # print(loss)
+        self.losses.append(float(loss))
         loss.backward()
         self.optimizer.step()
+
+    def GetLosses(self):
+        return self.losses
+
+    def ClearLosses(self):
+        self.losses = []
 
 
 class EmulatedJoystick(Joystick):
@@ -2106,18 +2152,24 @@ class EmulatedJoystick(Joystick):
         if self.rand.random() < EmulatedJoystick.EPSILON:
             inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             inferred[self.rand.randrange(9)] = 1.0
-        index = inferred.index(max(inferred))
+
+
+        # print("{:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}".format(inferred[0], inferred[1], inferred[2], inferred[3], inferred[4], inferred[5], inferred[6], inferred[7], inferred[8]))
+
+        max_value = max(inferred)
+        if max_value > 0.1:
+            index = inferred.index(max(inferred))
+        else:
+            index = self.rand.randrange(9)
         self.pressed = 0
-        if index == 0:
+        if index == 1:
             self.pressed |= Joystick.UP
-        elif index == 1:
-            self.pressed |= Joystick.UP | Joystick.RIGHT
         elif index == 2:
-            self.pressed |= Joystick.RIGHT
+            self.pressed |= Joystick.UP | Joystick.RIGHT
         elif index == 3:
-            self.pressed |= Joystick.RIGHT | Joystick.DOWN
+            self.pressed |= Joystick.RIGHT
         elif index == 4:
-            self.pressed |= Joystick.RIGHT | Joystick.DOWN
+            self.pressed |= Joystick.DOWN | Joystick.RIGHT
         elif index == 5:
             self.pressed |= Joystick.DOWN
         elif index == 6:
@@ -2125,7 +2177,7 @@ class EmulatedJoystick(Joystick):
         elif index == 7:
             self.pressed |= Joystick.LEFT
         elif index == 8:
-            self.pressed |= Joystick.LEFT | Joystick.UP
+            self.pressed |= Joystick.UP | Joystick.LEFT
         self.pressed |= Joystick.A
         self.trigger = (self.pressed ^ self.old) & self.pressed
         self.state_values = values
@@ -2151,20 +2203,23 @@ class Agent:
     ALPHA = 0.2
     MUTATION_RATE = 0.0 * 0.01
 
-    def __init__(self):
-        self.neural_network = NeuralNetwork()
+    def __init__(self, neural_network=None):
+        if neural_network == None:
+            self.neural_network = NeuralNetwork()
+        else:
+            self.neural_network = neural_network
         self.epsilon_seed = agent_rand.randrange(65535)
         self.score = 0
         self.destruction_score = 0
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.000001, 0.1)
         self.current_reward = 0.0
 
     def Clone(self):
-        agent = Agent()
-        agent.neural_network = copy.deepcopy(self.neural_network)
+        agent = Agent(copy.deepcopy(self.neural_network))
+        agent.epsilon_seed = self.epsilon_seed
         agent.score = self.score
         agent.destruction_score = self.destruction_score
         agent.frame_score = self.frame_score
@@ -2177,6 +2232,8 @@ class Agent:
 
     def Train(self):
         self.TrainLongMemory()
+        average_loss = self.GetAverageLoss()
+        print("Average loss: {}".format(average_loss))
 
     def TrainShortMemory(self):
         loop_count = len(self.experiences) - 1
@@ -2217,10 +2274,9 @@ class Agent:
     def ClearExperiences(self):
         self.experiences = []
 
-    def AddCurrentReward(self, reward):
-        # TODO: Rename this
-        # self.current_reward += reward
-        self.current_reward = reward
+    def UpdateCurrentReward(self, reward):
+        if reward < self.current_reward:
+            self.current_reward = reward
 
     def GetCurrentReward(self):
         return self.current_reward
@@ -2282,6 +2338,15 @@ class Agent:
     def UpdateEpsilonSeed(self):
         self.epsilon_seed = agent_rand.randrange(65535)
 
+    def GetAverageLoss(self):
+        losses = self.trainer.GetLosses()
+        total = 0.0
+        for loss in losses:
+            total += loss
+        average = total / len(losses)
+        self.trainer.ClearLosses()
+        return average
+
     def GetAlternated(cls, agents):
         elite = None
         scores = []
@@ -2293,15 +2358,21 @@ class Agent:
         agent = Agent.GetFromScore(agents, sorted_scores[0])
         elite = agent
         new_agents.append(agent)
-        for i in range(4):
-            score = sorted_scores[i + 1]
+        for i in range(6):
+            score = sorted_scores[i]
             agent = Agent.GetFromScore(agents, score).Clone()
-            a_agent = elite.Clone()
-            agent.Cross(a_agent)
-            agent.UpdateEpsilonSeed()
-            a_agent.UpdateEpsilonSeed()
+            # a_agent = elite.Clone()
+            # agent.Cross(a_agent)
+            # agent.UpdateEpsilonSeed()
+            # a_agent.UpdateEpsilonSeed()
+            # new_agents.append(agent)
+            # new_agents.append(a_agent)
+            # agent.UpdateEpsilonSeed()
             new_agents.append(agent)
-            new_agents.append(a_agent)
+        for i in range(2):
+            agent = elite.Clone()
+            agent.UpdateEpsilonSeed()
+            new_agents.append(agent)
         new_agents.append(Agent())
         return new_agents
     GetAlternated = classmethod(GetAlternated)
@@ -2380,7 +2451,7 @@ class Gss:
             agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
             agent.SetEventScore(event_score)
-            print("Generation: {}, Agent: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
+            print("Generation: {}, Agent: {}, Score: {:.1f}, Destruction score: {:.1f}, Frame score: {:.1f}, Event score: {:.1f}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             Gss.agent_index += 1
             if Gss.agent_index >= Gss.AGENT_NUM:
@@ -3045,6 +3116,7 @@ class Shooting:
                 done = True
             agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward(), done))
             agent.ClearCurrentReward()
+            agent.UpdateCurrentReward(1.0)
             for star in Shooting.scene.stars:
                 star.Draw(Gss.screen_surface)
             for beam in Shooting.scene.beams:
