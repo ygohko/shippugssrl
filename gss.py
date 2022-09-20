@@ -1972,6 +1972,7 @@ class Trainer:
         self.model = model
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
         self.criterion = nn.SmoothL1Loss()
+        self.losses = []
 
     def Train(self, state, q, action, next_reward, next_state):
         # TODO: Update arguments
@@ -2038,14 +2039,20 @@ class Trainer:
         # print("next_maximum_q: ", next_maximum_q)
         # print("b: ", b)
         loss = self.criterion(output, target)
-        # print(loss)
+        self.losses.append(float(loss))
         loss.backward()
         self.optimizer.step()
+
+    def GetLosses(self):
+        return self.losses
+
+    def ClearLosses(self):
+        self.losses = []
 
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.01
+    EPSILON = 0.1
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2225,6 +2232,8 @@ class Agent:
 
     def Train(self):
         self.TrainLongMemory()
+        average_loss = self.GetAverageLoss()
+        print("Average loss: {}".format(average_loss))
 
     def TrainShortMemory(self):
         loop_count = len(self.experiences) - 1
@@ -2328,6 +2337,15 @@ class Agent:
 
     def UpdateEpsilonSeed(self):
         self.epsilon_seed = agent_rand.randrange(65535)
+
+    def GetAverageLoss(self):
+        losses = self.trainer.GetLosses()
+        total = 0.0
+        for loss in losses:
+            total += loss
+        average = total / len(losses)
+        self.trainer.ClearLosses()
+        return average
 
     def GetAlternated(cls, agents):
         elite = None
@@ -2433,7 +2451,7 @@ class Gss:
             agent.SetFrameScore(frame_score)
             event_score = shooting.scene.status.agent_event_score
             agent.SetEventScore(event_score)
-            print("Generation: {}, Agent: {}, Score: {}, Destruction score: {}, Frame score: {}, Event score: {}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
+            print("Generation: {}, Agent: {}, Score: {:.1f}, Destruction score: {:.1f}, Frame score: {:.1f}, Event score: {:.1f}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
             Gss.joystick = Joystick()
             Gss.agent_index += 1
             if Gss.agent_index >= Gss.AGENT_NUM:
