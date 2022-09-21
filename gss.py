@@ -2149,18 +2149,19 @@ class EmulatedJoystick(Joystick):
         values[27] = value
         inferred = self.neural_network.Infer(values)
         self.q_values = inferred
-        if self.rand.random() < self.epsilon:
-            inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            inferred[self.rand.randrange(9)] = 1.0
 
 
         # print("{:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}".format(inferred[0], inferred[1], inferred[2], inferred[3], inferred[4], inferred[5], inferred[6], inferred[7], inferred[8]))
 
         max_value = max(inferred)
-        if max_value > 0.1:
-            index = inferred.index(max(inferred))
-        else:
-            index = self.rand.randrange(9)
+        min_value = min(inferred)
+        index = inferred.index(max_value)
+        if self.rand.random() < self.epsilon:
+            if min_value < 0.0:
+                index = inferred.index(min_value)
+            else:
+                index = self.rand.randrange(9)
+
         self.pressed = 0
         if index == 1:
             self.pressed |= Joystick.UP
@@ -2215,7 +2216,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.000001, 0.1)
+        self.trainer = Trainer(self.neural_network, 0.000001, 0.2)
         self.current_reward = 0.0
 
     def Clone(self):
@@ -2442,7 +2443,7 @@ class Gss:
 
             agent = Gss.agents[Gss.agent_index]
 
-            # TODO: Run shooting for training
+            # Run shooting for training
             enemy_rand.seed(123)
             effect_rand.seed(456)
             agent.SetEpsilon(0.1)
@@ -2453,7 +2454,7 @@ class Gss:
                 agent.Train()
             agent.ClearExperiences()
 
-            # TODO: Run shooting for scoring
+            # Run shooting for scoring
             enemy_rand.seed(123)
             effect_rand.seed(456)
             agent.SetEpsilon(0.0)
