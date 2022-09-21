@@ -1872,16 +1872,18 @@ class NeuralNetwork(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 18)
-        nn.init.uniform_(self.linear1.weight, -0.7, 0.7)
-        self.linear2 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear2.weight, -0.7, 0.7)
-        self.linear3 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear3.weight, -0.7, 0.7)
-        self.linear4 = nn.Linear(18, 18)
-        nn.init.uniform_(self.linear4.weight, -0.7, 0.7)
-        self.linear5 = nn.Linear(18, NeuralNetwork.OUTPUT_COUNT)
-        nn.init.uniform_(self.linear5.weight, -0.7, 0.7)
+        self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 36)
+        nn.init.uniform_(self.linear1.weight, -1.0, 1.0)
+        self.linear2 = nn.Linear(36, 36)
+        nn.init.uniform_(self.linear2.weight, -1.0, 1.0)
+        self.linear3 = nn.Linear(36, 36)
+        nn.init.uniform_(self.linear3.weight, -1.0, 1.0)
+        self.linear4 = nn.Linear(36, 36)
+        nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
+        self.linear5 = nn.Linear(36, 36)
+        nn.init.uniform_(self.linear4.weight, -1.0, 1.0)
+        self.linear6 = nn.Linear(36, NeuralNetwork.OUTPUT_COUNT)
+        nn.init.uniform_(self.linear5.weight, -1.0, 1.0)
         self.score = 0
 
     def forward(self, x):
@@ -1889,7 +1891,8 @@ class NeuralNetwork(nn.Module):
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
         x = F.relu(self.linear4(x))
-        x = self.linear5(x)
+        x = F.relu(self.linear5(x))
+        x = self.linear6(x)
         return x
 
     def Load(self, genes):
@@ -1907,6 +1910,7 @@ class NeuralNetwork(nn.Module):
         NeuralNetwork.CrossModule(self.linear3, neural_network.linear3, mutation_rate)
         NeuralNetwork.CrossModule(self.linear4, neural_network.linear4, mutation_rate)
         NeuralNetwork.CrossModule(self.linear5, neural_network.linear5, mutation_rate)
+        NeuralNetwork.CrossModule(self.linear6, neural_network.linear5, mutation_rate)
 
     def Clone(self):
         neural_network = NeuralNetwork()
@@ -1918,6 +1922,7 @@ class NeuralNetwork(nn.Module):
         NeuralNetwork.CopyModule(neural_network.linear3, self.linear3)
         NeuralNetwork.CopyModule(neural_network.linear4, self.linear4)
         NeuralNetwork.CopyModule(neural_network.linear5, self.linear5)
+        NeuralNetwork.CopyModule(neural_network.linear6, self.linear5)
 
         print("ogya---", neural_network.linear1.weight[0, 0])
 
