@@ -2052,7 +2052,6 @@ class Trainer:
 
 class EmulatedJoystick(Joystick):
     THRESHOLD = 0.5
-    EPSILON = 0.1
 
     def __init__(self, shooting, agent):
         super().__init__()
@@ -2062,6 +2061,7 @@ class EmulatedJoystick(Joystick):
         self.neural_network = agent.GetNeuralNetwork()
         self.rand = random.Random()
         self.rand.seed(agent.GetEpsilonSeed())
+        self.epsilon = agent.GetEpsilon()
         self.state_values = []
         self.q_values = []
         self.action_value = 0
@@ -2149,7 +2149,7 @@ class EmulatedJoystick(Joystick):
         values[27] = value
         inferred = self.neural_network.Infer(values)
         self.q_values = inferred
-        if self.rand.random() < EmulatedJoystick.EPSILON:
+        if self.rand.random() < self.epsilon:
             inferred = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             inferred[self.rand.randrange(9)] = 1.0
 
@@ -2208,6 +2208,7 @@ class Agent:
             self.neural_network = NeuralNetwork()
         else:
             self.neural_network = neural_network
+        self.epsilon = 0.0
         self.epsilon_seed = agent_rand.randrange(65535)
         self.score = 0
         self.destruction_score = 0
@@ -2332,6 +2333,12 @@ class Agent:
     def GetNeuralNetwork(self):
         return self.neural_network
 
+    def GetEpsilon(self):
+        return self.epsilon
+
+    def SetEpsilon(self, epsilon):
+        self.epsilon = epsilon
+
     def GetEpsilonSeed(self):
         return self.epsilon_seed
 
@@ -2429,22 +2436,35 @@ class Gss:
 
     def Main(self):
         Status.UpdateScales()
-        high_score = -1
-        high_score_index = -1
         while True:
             if Title().MainLoop() == Title.STATE_EXIT_QUIT:
                 return
+
+            agent = Gss.agents[Gss.agent_index]
+
+            # TODO: Run shooting for training
             enemy_rand.seed(123)
             effect_rand.seed(456)
+            agent.SetEpsilon(0.1)
+            shooting = Shooting()
+            Gss.joystick = EmulatedJoystick(shooting, agent)
+            shooting.MainLoop()
+            if Gss.agent_index > 0:
+                agent.Train()
+            agent.ClearExperiences()
+
+            # TODO: Run shooting for scoring
+            enemy_rand.seed(123)
+            effect_rand.seed(456)
+            agent.SetEpsilon(0.0)
             shooting = Shooting()
             agent = Gss.agents[Gss.agent_index]
             Gss.joystick = EmulatedJoystick(shooting, agent)
             shooting.MainLoop()
+            agent.ClearExperiences()
+
             score = shooting.scene.status.agent_score
             agent.SetScore(score)
-            if score > high_score:
-                high_score = score
-                high_score_index = Gss.agent_index
             destruction_score = shooting.scene.status.agent_destruction_score
             agent.SetDestructionScore(destruction_score)
             frame_score = shooting.scene.status.agent_frame_score
@@ -2455,14 +2475,8 @@ class Gss:
             Gss.joystick = Joystick()
             Gss.agent_index += 1
             if Gss.agent_index >= Gss.AGENT_NUM:
-                for i in range(len(Gss.agents)):
-                    if i != high_score_index:
-                        Gss.agents[i].Train()
-                    Gss.agents[i].ClearExperiences()
                 Gss.agents = Agent.GetAlternated(Gss.agents)
                 Gss.agent_index = 0
-                high_score = -1
-                high_score_index = -1
                 self.generation += 1
                 Agent.Save(Gss.agents, self.generation, "gen{}.pickle".format(self.generation))
 
