@@ -93,6 +93,7 @@ class Settings:
     def __init__(self):
         self.no_wait = False
         self.silent = False
+        self.frame_skipping = False
 
     def GetNoWait(self):
         return self.no_wait
@@ -105,6 +106,12 @@ class Settings:
 
     def SetSilent(self, silent):
         self.silent = silent
+
+    def GetFrameSkipping(self):
+        return self.frame_skipping
+
+    def SetFrameSkipping(self, frame_skipping):
+        self.frame_skipping = frame_skipping
 
 
 class Sprite:
@@ -2598,6 +2605,7 @@ class Title:
         self.gen = self.Move()
 
     def MainLoop(self):
+        frame_count = 0
         state = Title.STATE_CONTINUE
         while state == Title.STATE_CONTINUE:
             begin_ticks = pygame.time.get_ticks()
@@ -2607,25 +2615,30 @@ class Title:
                         state = Title.STATE_EXIT_QUIT
                     if event.key == pygame.K_c:
                         Gss.settings.SetNoWait(not Gss.settings.GetNoWait())
+                    if event.key == pygame.K_v:
+                        Gss.settings.SetFrameSkipping(not Gss.settings.GetFrameSkipping())
             Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             self.typewritertext.Process()
             self.logo.Process()
             if self.gen.__next__() == True:
                 state = Title.STATE_EXIT_START
-            self.logo.Draw(Gss.screen_surface)
-            self.typewritertext.Draw(Gss.screen_surface)
-            lap_time_min = Gss.best_lap_time / (60 * 60)
-            lap_time_sec = (Gss.best_lap_time / 60) % 60
-            lap_time_under_sec = (Gss.best_lap_time % 60) * 100 / 60 + 1
-            Gss.data.font.DrawString("BEST LAP: %02d'%02d''%02d" % (lap_time_min, lap_time_sec, lap_time_under_sec), Gss.screen_surface, 0, 0)
-            pygame.display.flip()
-            ticks = pygame.time.get_ticks() - begin_ticks
-            frame_time = 16
-            if Gss.settings.GetNoWait():
-                frame_time = 1
-            if ticks < frame_time:
-                pygame.time.delay(frame_time - ticks)
+            if not Gss.settings.GetFrameSkipping() or frame_count == 0:
+                self.logo.Draw(Gss.screen_surface)
+                self.typewritertext.Draw(Gss.screen_surface)
+                lap_time_min = Gss.best_lap_time / (60 * 60)
+                lap_time_sec = (Gss.best_lap_time / 60) % 60
+                lap_time_under_sec = (Gss.best_lap_time % 60) * 100 / 60 + 1
+                Gss.data.font.DrawString("BEST LAP: %02d'%02d''%02d" % (lap_time_min, lap_time_sec, lap_time_under_sec), Gss.screen_surface, 0, 0)
+                pygame.display.flip()
+                ticks = pygame.time.get_ticks() - begin_ticks
+                frame_time = 16
+                if Gss.settings.GetNoWait():
+                    frame_time = 1
+                if ticks < frame_time:
+                    pygame.time.delay(frame_time - ticks)
+            frame_count += 1
+            frame_count %= 600
         return state
 
     def Move(self):
@@ -3088,6 +3101,7 @@ class Shooting:
             # pygame.mixer.music.play(-1)
         event_parser = EventParser(test_events)
 
+        frame_count = 0
         state = Shooting.STATE_CONTINUE
         while state == Shooting.STATE_CONTINUE:
             begin_ticks = pygame.time.get_ticks()
@@ -3097,6 +3111,8 @@ class Shooting:
                         state = Shooting.STATE_EXIT_QUIT
                     if event.key == pygame.K_c:
                         Gss.settings.SetNoWait(not Gss.settings.GetNoWait())
+                    if event.key == pygame.K_v:
+                        Gss.settings.SetFrameSkipping(not Gss.settings.GetFrameSkipping())
             Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             Shooting.scene.player.Process()
@@ -3132,32 +3148,35 @@ class Shooting:
             agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward(), done))
             agent.ClearCurrentReward()
             agent.UpdateCurrentReward(1.0)
-            for star in Shooting.scene.stars:
-                star.Draw(Gss.screen_surface)
-            for beam in Shooting.scene.beams:
-                beam.Draw(Gss.screen_surface)
-            for enemy in Shooting.scene.enemies:
-                enemy.Draw(Gss.screen_surface)
-            Shooting.scene.player.Draw(Gss.screen_surface)
-            for explosion in Shooting.scene.explosions:
-                explosion.Draw(Gss.screen_surface)
-            for bullet in Shooting.scene.bullets:
-                bullet.Draw(Gss.screen_surface)
-            if Shooting.scene.floatstring != None:
-                Shooting.scene.floatstring.Draw(Gss.screen_surface)
-            if Shooting.scene.gameoverstring != None:
-                Shooting.scene.gameoverstring.Draw(Gss.screen_surface)
-            if Shooting.scene.ending != None:
-                Shooting.scene.ending.Draw(Gss.screen_surface)
-            Shooting.scene.status.IncrementFrameNum()
-            Shooting.scene.status.Draw(Gss.screen_surface)
-            pygame.display.flip()
-            ticks = pygame.time.get_ticks() - begin_ticks
-            frame_time = 16
-            if Gss.settings.GetNoWait():
-                frame_time = 1
-            if ticks < frame_time:
-                pygame.time.delay(frame_time - ticks)
+            if not Gss.settings.GetFrameSkipping() or frame_count == 0:
+                for star in Shooting.scene.stars:
+                    star.Draw(Gss.screen_surface)
+                for beam in Shooting.scene.beams:
+                    beam.Draw(Gss.screen_surface)
+                for enemy in Shooting.scene.enemies:
+                    enemy.Draw(Gss.screen_surface)
+                Shooting.scene.player.Draw(Gss.screen_surface)
+                for explosion in Shooting.scene.explosions:
+                    explosion.Draw(Gss.screen_surface)
+                for bullet in Shooting.scene.bullets:
+                    bullet.Draw(Gss.screen_surface)
+                if Shooting.scene.floatstring != None:
+                    Shooting.scene.floatstring.Draw(Gss.screen_surface)
+                if Shooting.scene.gameoverstring != None:
+                    Shooting.scene.gameoverstring.Draw(Gss.screen_surface)
+                if Shooting.scene.ending != None:
+                    Shooting.scene.ending.Draw(Gss.screen_surface)
+                Shooting.scene.status.IncrementFrameNum()
+                Shooting.scene.status.Draw(Gss.screen_surface)
+                pygame.display.flip()
+                ticks = pygame.time.get_ticks() - begin_ticks
+                frame_time = 16
+                if Gss.settings.GetNoWait():
+                    frame_time = 1
+                if ticks < frame_time:
+                    pygame.time.delay(frame_time - ticks)
+            frame_count += 1
+            frame_count %= 600
         if not Gss.settings.GetSilent():
             pygame.mixer.music.stop()
         lap_time = Shooting.scene.status.GetLapTime()
@@ -3197,6 +3216,8 @@ if __name__ == "__main__":
                         settings.SetNoWait(True)
                     elif character == "s":
                         settings.SetSilent(True)
+                    elif character == "f":
+                        settings.SetFrameSkipping(True)
             else:
                 agents, generation = Agent.Load(argument[1])
     Gss(agents, generation, settings).Main()
