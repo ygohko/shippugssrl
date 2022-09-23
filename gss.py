@@ -94,6 +94,7 @@ class Settings:
         self.no_wait = False
         self.silent = False
         self.frame_skipping = False
+        self.elite_skipping = False
 
     def GetNoWait(self):
         return self.no_wait
@@ -112,6 +113,12 @@ class Settings:
 
     def SetFrameSkipping(self, frame_skipping):
         self.frame_skipping = frame_skipping
+
+    def GetEliteSkipping(self):
+        return self.elite_skipping
+
+    def SetEliteSkipping(self, elite_skipping):
+        self.elite_skipping = elite_skipping
 
 
 class Sprite:
@@ -2446,40 +2453,35 @@ class Gss:
         while True:
             if Title().MainLoop() == Title.STATE_EXIT_QUIT:
                 return
-
             agent = Gss.agents[Gss.agent_index]
-
-            # Run shooting for training
             if Gss.agent_index > 0:
+                # Run shooting for training
                 enemy_rand.seed(123)
                 effect_rand.seed(456)
                 agent.SetEpsilon(0.1)
                 shooting = Shooting()
                 Gss.joystick = EmulatedJoystick(shooting, agent)
                 shooting.MainLoop()
-                if Gss.agent_index > 0:
-                    agent.Train()
+                agent.Train()
                 agent.ClearExperiences()
-
-            # Run shooting for scoring
-            enemy_rand.seed(123)
-            effect_rand.seed(456)
-            agent.SetEpsilon(0.0)
-            shooting = Shooting()
-            agent = Gss.agents[Gss.agent_index]
-            Gss.joystick = EmulatedJoystick(shooting, agent)
-            shooting.MainLoop()
-            agent.ClearExperiences()
-
-            score = shooting.scene.status.agent_score
-            agent.SetScore(score)
-            destruction_score = shooting.scene.status.agent_destruction_score
-            agent.SetDestructionScore(destruction_score)
-            frame_score = shooting.scene.status.agent_frame_score
-            agent.SetFrameScore(frame_score)
-            event_score = shooting.scene.status.agent_event_score
-            agent.SetEventScore(event_score)
-            print("Generation: {}, Agent: {}, Score: {:.1f}, Destruction score: {:.1f}, Frame score: {:.1f}, Event score: {:.1f}".format(self.generation, self.agent_index, score, destruction_score, frame_score, event_score))
+            if not Gss.settings.GetEliteSkipping() or Gss.agent_index > 0:
+                # Run shooting for scoring
+                enemy_rand.seed(123)
+                effect_rand.seed(456)
+                agent.SetEpsilon(0.0)
+                shooting = Shooting()
+                Gss.joystick = EmulatedJoystick(shooting, agent)
+                shooting.MainLoop()
+                agent.ClearExperiences()
+                score = shooting.scene.status.agent_score
+                agent.SetScore(score)
+                destruction_score = shooting.scene.status.agent_destruction_score
+                agent.SetDestructionScore(destruction_score)
+                frame_score = shooting.scene.status.agent_frame_score
+                agent.SetFrameScore(frame_score)
+                event_score = shooting.scene.status.agent_event_score
+                agent.SetEventScore(event_score)
+            print("Generation: {}, Agent: {}, Score: {:.1f}, Destruction score: {:.1f}, Frame score: {:.1f}, Event score: {:.1f}".format(self.generation, self.agent_index, agent.GetScore(), agent.GetDestructionScore(), agent.GetFrameScore(), agent.GetEventScore()))
             Gss.joystick = Joystick()
             Gss.agent_index += 1
             if Gss.agent_index >= Gss.AGENT_NUM:
@@ -2617,6 +2619,8 @@ class Title:
                         Gss.settings.SetNoWait(not Gss.settings.GetNoWait())
                     if event.key == pygame.K_v:
                         Gss.settings.SetFrameSkipping(not Gss.settings.GetFrameSkipping())
+                    if event.key == pygame.K_b:
+                        Gss.settings.SetEliteSkipping(not Gss.settings.GetEliteSkipping())
             Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             self.typewritertext.Process()
@@ -3113,6 +3117,8 @@ class Shooting:
                         Gss.settings.SetNoWait(not Gss.settings.GetNoWait())
                     if event.key == pygame.K_v:
                         Gss.settings.SetFrameSkipping(not Gss.settings.GetFrameSkipping())
+                    if event.key == pygame.K_b:
+                        Gss.settings.SetEliteSkipping(not Gss.settings.GetEliteSkipping())
             Gss.screen_surface.fill((0, 0, 0))
             Gss.joystick.Update()
             Shooting.scene.player.Process()
@@ -3218,6 +3224,8 @@ if __name__ == "__main__":
                         settings.SetSilent(True)
                     elif character == "f":
                         settings.SetFrameSkipping(True)
+                    elif character == "e":
+                        settings.SetEliteSkipping(True)
             else:
                 agents, generation = Agent.Load(argument[1])
     Gss(agents, generation, settings).Main()
