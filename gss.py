@@ -2247,7 +2247,7 @@ class Agent:
     def Train(self):
         self.TrainLongMemory()
         average_loss = self.GetAverageLoss()
-        print("Average loss: {}".format(average_loss))
+        print("Average loss: {:.5f}".format(average_loss))
 
     def TrainShortMemory(self):
         loop_count = len(self.experiences) - 1
