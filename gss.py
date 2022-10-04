@@ -1747,7 +1747,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agents[Gss.agent_index].UpdateCurrentReward(100.0)
+                    Gss.agents[Gss.agent_index].UpdateCurrentReward(2.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -2006,9 +2006,9 @@ class Trainer:
         q = q[action]
 
         # Update the network
+        self.optimizer.zero_grad()
         output = self.model(state)
         # print("output:", output)
-        self.optimizer.zero_grad()
         # grad_fn = output.grad_fn
         # output[0][0] = q
         # output[0][1] = q
@@ -2050,13 +2050,6 @@ class Trainer:
 
         target = torch.tensor(target, dtype=torch.float)
         target = torch.unsqueeze(target, 0)
-        # print("target:", target)
-        # b = [b, b, b, b, b, b, b, b, b]
-        # b = torch.tensor(b, dtype=torch.float)
-        # b = torch.unsqueeze(b, 0)
-        # print("next_reward: ", next_reward)
-        # print("next_maximum_q: ", next_maximum_q)
-        # print("b: ", b)
         loss = self.criterion(output, target)
         self.losses.append(float(loss))
         loss.backward()
@@ -2235,7 +2228,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.0001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.00002, 0.9)
         self.current_reward = 0.0
 
     def Clone(self):
