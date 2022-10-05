@@ -276,11 +276,13 @@ class Player(Actor):
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x or self.y != old_y:
-                agent.UpdateCurrentReward(0.0)
+                pass
+                # agent.UpdateCurrentReward(0.0)
                 # Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(320):
-                agent.UpdateCurrentReward(0.0)
+                pass
+                # agent.UpdateCurrentReward(0.0)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1747,7 +1749,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agents[Gss.agent_index].UpdateCurrentReward(2.0)
+                    Gss.agents[Gss.agent_index].SetCurrentAttackReward(1.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1755,14 +1757,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agents[Gss.agent_index].UpdateCurrentReward(0)
+                Gss.agents[Gss.agent_index].SetCurrentDefenceReward(1.0)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agents[Gss.agent_index].UpdateCurrentReward(0)
+                Gss.agents[Gss.agent_index].SetCurrentDefenceReward(1.0)
 
 
 class EventParser:
@@ -1875,8 +1877,7 @@ class Joystick:
 
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
-    OUTPUT_COUNT = 9
-    GENE_COUNT = 18 * INPUT_COUNT + 18 + 18 * 18 + 18 + 18 * 18 + 18 + 18 * 18 + 18 + OUTPUT_COUNT * 18 + OUTPUT_COUNT
+    OUTPUT_COUNT = 18
 
     instance = None
     previous = None
@@ -1990,8 +1991,7 @@ class Trainer:
         self.criterion = nn.SmoothL1Loss()
         self.losses = []
 
-    def Train(self, state, q, action, next_reward, next_state):
-        # TODO: Update arguments
+    def Train(self, state, action, next_attack_reward, next_defence_reward, next_state):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype=torch.float)
         if len(state.shape) == 1:
@@ -2000,56 +2000,29 @@ class Trainer:
 
         # Predict next maximum Q value
         pred = self.model(next_state)[0].tolist()
-        # print("pred: ", pred)
-        next_maximum_q = max(pred)
-        # Prepare current Q value
-        q = q[action]
+        attack_q_values = pred[0:9]
+        defence_q_values = pred[9:18]
+        next_max_attack_q_value = max(attack_q_values)
+        next_max_defence_q_value = max(attack_q_values)
 
         # Update the network
         self.optimizer.zero_grad()
         output = self.model(state)
-        # print("output:", output)
-        # grad_fn = output.grad_fn
-        # output[0][0] = q
-        # output[0][1] = q
-        # output[0][2] = q
-        # output[0][3] = q
-        # output[0][4] = q
-        # output[0][5] = q
-        # output[0][6] = q
-        # output[0][7] = q
-        # output[0][8] = q
-        # print(dir(output))
-        # output.grad_fn = grad_fn
-        # print("output:", output)
-        # a = q
-        # a = [a, a, a, a, a, a, a, a, a]
-        # a = torch.tensor(a, dtype=torch.float)
-        # a = torch.unsqueeze(a, 0)
-        # print("next_reward: ", next_reward)
-        # print("next_maximum_q: ", next_maximum_q)
-        b = next_reward + self.gamma * next_maximum_q
-        # print("b:", b)
+        attack_q_value = next_attack_reward + self.gamma * next_max_attack_q_value
+        defence_q_value  = next_defence_reward + self.gamma * next_max_defence_q_value
         target = []
-        for i in range(9):
+        for i in range(18):
             if i == action:
-                target.append(b)
+                target.append(attack_q_value)
+            elif i >= 9 and (i - 9) == action:
+                target.append(defence_q_value)
             else:
                 target.append(output[0][i])
-                # else:
-                #     target.append(0.0)
-        # if b < 1.0:
-        #     # print("babu: ", action)
-        #     for i in range(9):
-        #         target[i] = 0.0
-
-        # for i in range(9):
-        #     target[i] = 0.0
-        # target[4] = 1.0
-
-
         target = torch.tensor(target, dtype=torch.float)
         target = torch.unsqueeze(target, 0)
+        if next_defence_reward > 0.0:
+            # print("next_defence_reward: ", next_defence_reward)
+            print("target: ", target)
         loss = self.criterion(output, target)
         self.losses.append(float(loss))
         loss.backward()
@@ -2160,19 +2133,18 @@ class EmulatedJoystick(Joystick):
             value = (y - (SCREEN_HEIGHT - 100.0)) / 100.0
         values[27] = value
         inferred = self.neural_network.Infer(values)
+        # TODO: Remove below
         self.q_values = inferred
-
-
-        # print("{:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}, {:.1f}".format(inferred[0], inferred[1], inferred[2], inferred[3], inferred[4], inferred[5], inferred[6], inferred[7], inferred[8]))
-
-        max_value = max(inferred)
-        min_value = min(inferred)
-        index = inferred.index(max_value)
+        attack_q_values = inferred[0:9]
+        defence_q_values = inferred[9:18]
+        max_attack_q_value = max(attack_q_values)
+        max_defence_q_value = max(defence_q_values)
+        min_defence_q_value = min(defence_q_values)
+        index = attack_q_values.index(max_attack_q_value)
+        if max_defence_q_value > 0.5:
+            index = defence_q_values.index(max_defence_q_value)
         if self.rand.random() < self.epsilon:
-            if min_value < 0.0:
-                index = inferred.index(min_value)
-            else:
-                index = self.rand.randrange(9)
+            index = self.rand.randrange(9)
 
         self.pressed = 0
         if index == 1:
@@ -2229,7 +2201,8 @@ class Agent:
         self.event_score = 0
         self.experiences = []
         self.trainer = Trainer(self.neural_network, 0.00002, 0.9)
-        self.current_reward = 0.0
+        self.current_attack_reward = 0.0
+        self.current_defence_reward = 0.0
 
     def Clone(self):
         agent = Agent(copy.deepcopy(self.neural_network))
@@ -2289,17 +2262,21 @@ class Agent:
     def ClearExperiences(self):
         self.experiences = []
 
-    def UpdateCurrentReward(self, reward):
-        if self.current_reward < 1.0:
-            pass
-        else:
-            self.current_reward = reward
+    def SetCurrentAttackReward(self, reward):
+        self.current_attack_reward = reward
 
-    def GetCurrentReward(self):
-        return self.current_reward
+    def SetCurrentDefenceReward(self, reward):
+        self.current_defence_reward = reward
 
-    def ClearCurrentReward(self):
-        self.current_reward = 1.0
+    def GetCurrentAttackReward(self):
+        return self.current_attack_reward
+
+    def GetCurrentDefenceReward(self):
+        return self.current_defence_reward
+
+    def ClearCurrentRewards(self):
+        self.current_attack_reward = 0.0
+        self.current_defence_reward = 0.0
 
     def Cross(self, agent):
         self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE)
@@ -3140,13 +3117,8 @@ class Shooting:
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
             agent = Gss.agents[Gss.agent_index]
-            reward = agent.GetCurrentReward()
-            done = False
-            if reward != 0.0:
-                done = True
-            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetQValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward(), done))
-            agent.ClearCurrentReward()
-            agent.UpdateCurrentReward(1.0)
+            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentAttackReward(), agent.GetCurrentDefenceReward()))
+            agent.ClearCurrentRewards()
             if not Gss.settings.GetFrameSkipping() or frame_count == 0:
                 for star in Shooting.scene.stars:
                     star.Draw(Gss.screen_surface)
