@@ -277,12 +277,12 @@ class Player(Actor):
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x or self.y != old_y:
                 pass
-                # agent.UpdateCurrentReward(0.0)
+                agent.SetCurrentDefenceReward(0.1)
                 # Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(320):
                 pass
-                # agent.UpdateCurrentReward(0.0)
+                agent.SetCurrentDefenceReward(0.1)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1991,25 +1991,28 @@ class Trainer:
         self.criterion = nn.SmoothL1Loss()
         self.losses = []
 
-    def Train(self, state, action, next_attack_reward, next_defence_reward, next_state):
+    def Train(self, state, action, attack_reward, defence_reward, next_state):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype=torch.float)
-        if len(state.shape) == 1:
-            state = torch.unsqueeze(state, 0)
-            next_state = torch.unsqueeze(next_state, 0)
+        # if len(state.shape) == 1:
+        #     state = torch.unsqueeze(state, 0)
+        #     next_state = torch.unsqueeze(next_state, 0)
 
         # Predict next maximum Q value
-        pred = self.model(next_state)[0].tolist()
+        pred = self.model(next_state).tolist()
+        # print("pred: ", pred)
+
+
         attack_q_values = pred[0:9]
         defence_q_values = pred[9:18]
         next_max_attack_q_value = max(attack_q_values)
-        next_max_defence_q_value = max(attack_q_values)
+        next_max_defence_q_value = max(defence_q_values)
 
         # Update the network
         self.optimizer.zero_grad()
         output = self.model(state)
-        attack_q_value = next_attack_reward + self.gamma * next_max_attack_q_value
-        defence_q_value  = next_defence_reward + self.gamma * next_max_defence_q_value
+        attack_q_value = attack_reward + self.gamma * next_max_attack_q_value
+        defence_q_value  = defence_reward + self.gamma * next_max_defence_q_value
         target = []
         for i in range(18):
             if i == action:
@@ -2017,10 +2020,10 @@ class Trainer:
             elif i >= 9 and (i - 9) == action:
                 target.append(defence_q_value)
             else:
-                target.append(output[0][i])
+                target.append(output[i])
         target = torch.tensor(target, dtype=torch.float)
         target = torch.unsqueeze(target, 0)
-        if next_defence_reward > 0.0:
+        if defence_reward > 0.5:
             # print("next_defence_reward: ", next_defence_reward)
             print("target: ", target)
         loss = self.criterion(output, target)
@@ -2142,7 +2145,7 @@ class EmulatedJoystick(Joystick):
         min_defence_q_value = min(defence_q_values)
         index = attack_q_values.index(max_attack_q_value)
         if max_defence_q_value > 0.5:
-            index = defence_q_values.index(max_defence_q_value)
+            index = defence_q_values.index(min_defence_q_value)
         if self.rand.random() < self.epsilon:
             index = self.rand.randrange(9)
 
@@ -2200,7 +2203,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.00002, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.00002, 0.85)
         self.current_attack_reward = 0.0
         self.current_defence_reward = 0.0
 
