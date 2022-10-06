@@ -1878,33 +1878,30 @@ class Joystick:
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
     OUTPUT_COUNT = 18
+    INTERMEDIATE_COUNT = 36
+    INTERMEDIATE_LAYER_COUNT = 4
 
     instance = None
     previous = None
 
     def __init__(self):
         super().__init__()
-        self.linear1 = nn.Linear(NeuralNetwork.INPUT_COUNT, 36)
-        nn.init.kaiming_uniform_(self.linear1.weight, mode="fan_in", nonlinearity="relu")
-        self.linear2 = nn.Linear(36, 36)
-        nn.init.kaiming_uniform_(self.linear2.weight, mode="fan_in", nonlinearity="relu")
-        self.linear3 = nn.Linear(36, 36)
-        nn.init.kaiming_uniform_(self.linear3.weight, mode="fan_in", nonlinearity="relu")
-        self.linear4 = nn.Linear(36, 36)
-        nn.init.kaiming_uniform_(self.linear4.weight, mode="fan_in", nonlinearity="relu")
-        self.linear5 = nn.Linear(36, 36)
-        nn.init.kaiming_uniform_(self.linear4.weight, mode="fan_in", nonlinearity="relu")
-        self.linear6 = nn.Linear(36, NeuralNetwork.OUTPUT_COUNT)
-        nn.init.kaiming_uniform_(self.linear5.weight, mode="fan_in", nonlinearity="relu")
+        self.input_layer = nn.Linear(NeuralNetwork.INPUT_COUNT, NeuralNetwork.INTERMEDIATE_COUNT)
+        nn.init.kaiming_uniform_(self.input_layer.weight, mode="fan_in", nonlinearity="relu")
+        self.intermediate_layers = []
+        for i in range(NeuralNetwork.INTERMEDIATE_LAYER_COUNT):
+            layer = nn.Linear(NeuralNetwork.INTERMEDIATE_COUNT, NeuralNetwork.INTERMEDIATE_COUNT)
+            nn.init.kaiming_uniform_(layer.weight, mode="fan_in", nonlinearity="relu")
+            self.intermediate_layers.append(layer)
+        self.output_layer = nn.Linear(NeuralNetwork.INTERMEDIATE_COUNT, NeuralNetwork.OUTPUT_COUNT)
+        nn.init.kaiming_uniform_(self.output_layer.weight, mode="fan_in", nonlinearity="relu")
         self.score = 0
 
     def forward(self, x):
-        x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
-        x = F.relu(self.linear4(x))
-        x = F.relu(self.linear5(x))
-        x = self.linear6(x)
+        x = F.relu(self.input_layer(x))
+        for layer in self.intermediate_layers:
+            x = F.relu(layer(x))
+        x = self.output_layer(x)
         return x
 
     def Load(self, genes):
