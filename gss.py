@@ -2048,6 +2048,7 @@ class EmulatedJoystick(Joystick):
         self.state_values = []
         self.q_values = []
         self.action_value = 0
+        self.total_max_defence_q_value = 0.0
 
     def Update(self):
         self.position += 1
@@ -2138,8 +2139,13 @@ class EmulatedJoystick(Joystick):
         max_attack_q_value = max(attack_q_values)
         max_defence_q_value = max(defence_q_values)
         min_defence_q_value = min(defence_q_values)
+        # adhoc
+        if self.total_max_defence_q_value < max_defence_q_value:
+            self.total_max_defence_q_value = max_defence_q_value
+        threshold = self.total_max_defence_q_value * 0.5
         index = attack_q_values.index(max_attack_q_value)
-        if max_defence_q_value > 1.0:
+        # TODO: Make threshold value from Q values?
+        if max_defence_q_value > threshold:
             index = defence_q_values.index(min_defence_q_value) + 1
             # print(defence_q_values)
             # print(min(defence_q_values)[O)
@@ -2201,7 +2207,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.001, 0.9)
+        self.trainer = Trainer(self.neural_network, 0.001, 0.95)
         self.current_attack_reward = 0.0
         self.current_defence_reward = 0.0
 
