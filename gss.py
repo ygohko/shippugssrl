@@ -277,12 +277,12 @@ class Player(Actor):
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x or self.y != old_y:
                 pass
-                agent.SetCurrentDefenceReward(0.1)
+                # agent.SetCurrentAttackReward(0.0)
                 # Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(320):
                 pass
-                agent.SetCurrentDefenceReward(0.1)
+                # agent.SetCurrentAttackReward(0.0)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1878,8 +1878,8 @@ class Joystick:
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
     OUTPUT_COUNT = 18
-    INTERMEDIATE_COUNT = 36
-    INTERMEDIATE_LAYER_COUNT = 4
+    INTERMEDIATE_COUNT = 72
+    INTERMEDIATE_LAYER_COUNT = 8
 
     instance = None
     previous = None
@@ -2142,6 +2142,7 @@ class EmulatedJoystick(Joystick):
         min_defence_q_value = min(defence_q_values)
         index = attack_q_values.index(max_attack_q_value)
         if max_defence_q_value > 0.5:
+            # print("escaping. max_defence_q_value: ", max_defence_q_value)
             index = defence_q_values.index(min_defence_q_value)
         if self.rand.random() < self.epsilon:
             index = self.rand.randrange(9)
@@ -3115,6 +3116,8 @@ class Shooting:
             Shooting.scene.CheckBeamEnemyCollision()
             Shooting.scene.CheckBulletPlayerCollision()
             Shooting.scene.CheckEnemyPlayerCollision()
+            if Shooting.scene.player.x > FIXED_WIDTH // 2:
+                agent.SetCurrentAttackReward(0.0)
             Shooting.scene.status.IncrementLapTime()
             agent = Gss.agents[Gss.agent_index]
             agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentAttackReward(), agent.GetCurrentDefenceReward()))
