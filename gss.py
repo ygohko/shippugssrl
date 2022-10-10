@@ -277,12 +277,12 @@ class Player(Actor):
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x or self.y != old_y:
                 pass
-                agent.SetCurrentDefenceReward(0.1)
+                # agent.SetCurrentDefenceReward(0.1)
                 # Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(320):
                 pass
-                agent.SetCurrentDefenceReward(0.1)
+                # agent.SetCurrentDefenceReward(0.1)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1987,7 +1987,7 @@ class Trainer:
         self.lr = lr
         self.gamma = gamma
         self.model = model
-        self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
+        self.optimizer = optim.SGD(model.parameters(), lr=self.lr)
         self.criterion = nn.SmoothL1Loss()
         self.losses = []
 
@@ -2002,12 +2002,10 @@ class Trainer:
         pred = self.model(next_state).tolist()
         # print("pred: ", pred)
 
-
         attack_q_values = pred[0:9]
         defence_q_values = pred[9:18]
         next_max_attack_q_value = max(attack_q_values)
         next_max_defence_q_value = max(defence_q_values)
-
         # Update the network
         self.optimizer.zero_grad()
         output = self.model(state)
@@ -2022,10 +2020,7 @@ class Trainer:
             else:
                 target.append(output[i])
         target = torch.tensor(target, dtype=torch.float)
-        target = torch.unsqueeze(target, 0)
-        if defence_reward > 0.5:
-            # print("next_defence_reward: ", next_defence_reward)
-            print("target: ", target)
+        # target = torch.unsqueeze(target, 0)
         loss = self.criterion(output, target)
         self.losses.append(float(loss))
         loss.backward()
@@ -2139,13 +2134,16 @@ class EmulatedJoystick(Joystick):
         # TODO: Remove below
         self.q_values = inferred
         attack_q_values = inferred[0:9]
-        defence_q_values = inferred[9:18]
+        defence_q_values = inferred[10:18]
         max_attack_q_value = max(attack_q_values)
         max_defence_q_value = max(defence_q_values)
         min_defence_q_value = min(defence_q_values)
         index = attack_q_values.index(max_attack_q_value)
         if max_defence_q_value > 0.5:
-            index = defence_q_values.index(min_defence_q_value)
+            index = defence_q_values.index(min_defence_q_value) + 1
+            # print(defence_q_values)
+            # print(min(defence_q_values)[O)
+            print("escaping. index: ", index)
         if self.rand.random() < self.epsilon:
             index = self.rand.randrange(9)
 
@@ -2203,7 +2201,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.00002, 0.85)
+        self.trainer = Trainer(self.neural_network, 0.001, 0.85)
         self.current_attack_reward = 0.0
         self.current_defence_reward = 0.0
 
@@ -3120,6 +3118,11 @@ class Shooting:
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
             agent = Gss.agents[Gss.agent_index]
+            if Shooting.scene.player.x > FIXED_WIDTH // 2:
+                agent.SetCurrentAttackReward(agent.GetCurrentAttackReward() * 0.1)
+                agent.SetCurrentDefenceReward(agent.GetCurrentDefenceReward() * 1.5)
+            if Shooting.scene.player.x < FIXED_WIDTH // 4:
+                agent.SetCurrentAttackReward(agent.GetCurrentAttackReward() * 1.1)
             agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentAttackReward(), agent.GetCurrentDefenceReward()))
             agent.ClearCurrentRewards()
             if not Gss.settings.GetFrameSkipping() or frame_count == 0:
