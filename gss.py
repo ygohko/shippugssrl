@@ -2139,11 +2139,11 @@ class EmulatedJoystick(Joystick):
         max_defence_q_value = max(defence_q_values)
         min_defence_q_value = min(defence_q_values)
         index = attack_q_values.index(max_attack_q_value)
-        if max_defence_q_value > 0.5:
+        if max_defence_q_value > 1.0:
             index = defence_q_values.index(min_defence_q_value) + 1
             # print(defence_q_values)
             # print(min(defence_q_values)[O)
-            print("escaping. index: ", index)
+            print("escaping. index, max_defence_q_value: ", index, max_defence_q_value)
         if self.rand.random() < self.epsilon:
             index = self.rand.randrange(9)
 
@@ -2201,7 +2201,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.001, 0.85)
+        self.trainer = Trainer(self.neural_network, 0.001, 0.9)
         self.current_attack_reward = 0.0
         self.current_defence_reward = 0.0
 
@@ -2430,6 +2430,7 @@ class Gss:
                 enemy_rand.seed(123)
                 effect_rand.seed(456)
                 agent.SetEpsilon(0.1)
+                agent.UpdateEpsilonSeed()
                 shooting = Shooting()
                 Gss.joystick = EmulatedJoystick(shooting, agent)
                 shooting.MainLoop()
