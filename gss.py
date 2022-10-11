@@ -2142,14 +2142,15 @@ class EmulatedJoystick(Joystick):
         # adhoc
         if self.total_max_defence_q_value < max_defence_q_value:
             self.total_max_defence_q_value = max_defence_q_value
-        threshold = self.total_max_defence_q_value * 0.5
+        threshold = self.total_max_defence_q_value * 0.7
         index = attack_q_values.index(max_attack_q_value)
         # TODO: Make threshold value from Q values?
         if max_defence_q_value > threshold:
             index = defence_q_values.index(min_defence_q_value) + 1
             # print(defence_q_values)
             # print(min(defence_q_values)[O)
-            print("escaping. index, max_defence_q_value: ", index, max_defence_q_value)
+            # print("threshold: ", threshold)
+            # print("escaping. index, max_defence_q_value: ", index, max_defence_q_value)
         if self.rand.random() < self.epsilon:
             index = self.rand.randrange(9)
 
@@ -2207,7 +2208,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.001, 0.95)
+        self.trainer = Trainer(self.neural_network, 0.001, 0.90)
         self.current_attack_reward = 0.0
         self.current_defence_reward = 0.0
 
@@ -2433,8 +2434,8 @@ class Gss:
             agent = Gss.agents[Gss.agent_index]
             if Gss.agent_index > 0:
                 # Run shooting for training
-                enemy_rand.seed(123)
-                effect_rand.seed(456)
+                enemy_rand.seed(agent_rand.randrange(65536))
+                effect_rand.seed(agent_rand.randrange(65536))
                 agent.SetEpsilon(0.1)
                 agent.UpdateEpsilonSeed()
                 shooting = Shooting()
@@ -3127,7 +3128,7 @@ class Shooting:
             agent = Gss.agents[Gss.agent_index]
             if Shooting.scene.player.x > FIXED_WIDTH // 2:
                 agent.SetCurrentAttackReward(agent.GetCurrentAttackReward() * 0.1)
-                agent.SetCurrentDefenceReward(agent.GetCurrentDefenceReward() * 1.5)
+                agent.SetCurrentDefenceReward(agent.GetCurrentDefenceReward() * 2.0)
             if Shooting.scene.player.x < FIXED_WIDTH // 4:
                 agent.SetCurrentAttackReward(agent.GetCurrentAttackReward() * 1.1)
             agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentAttackReward(), agent.GetCurrentDefenceReward()))
