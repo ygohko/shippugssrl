@@ -1749,7 +1749,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agents[Gss.agent_index].SetCurrentReward(1.0)
+                    Gss.agents[Gss.agent_index].SetCurrentReward(2.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -3102,9 +3102,15 @@ class Shooting:
             Shooting.scene.status.IncrementLapTime()
             agent = Gss.agents[Gss.agent_index]
             if Shooting.scene.player.x > FIXED_WIDTH // 2:
-                agent.SetCurrentReward(agent.GetCurrentReward() * 0.1)
+                current_reward = agent.GetCurrentReward()
+                if current_reward > 0.0:
+                    agent.SetCurrentReward(current_reward * 0.1)
+                else:
+                    agent.SetCurrentReward(current_reward * 2.0)
             if Shooting.scene.player.x < FIXED_WIDTH // 4:
-                agent.SetCurrentReward(agent.GetCurrentReward() * 1.1)
+                current_reward = agent.GetCurrentReward()
+                if current_reward > 0.0:
+                    agent.SetCurrentReward(agent.GetCurrentReward() * 1.1)
             agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward()))
             agent.ClearCurrentRewards()
             if not Gss.settings.GetFrameSkipping() or frame_count == 0:
