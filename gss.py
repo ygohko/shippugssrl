@@ -277,12 +277,12 @@ class Player(Actor):
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
             if self.x != old_x or self.y != old_y:
                 pass
-                # agent.SetCurrentDefenceReward(0.1)
+                # agent.SetCurrentReward(0.1)
                 # Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
             if self.x > Fixed(320):
                 pass
-                # agent.SetCurrentDefenceReward(0.1)
+                # agent.SetCurrentReward(0.1)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1749,7 +1749,7 @@ class Scene:
                 if enemy.HasCollision() == True and beam.CheckCollision(enemy) == True:
                     enemy.AddDamage(1)
                     self.beams.Remove(beam)
-                    Gss.agents[Gss.agent_index].SetCurrentAttackReward(1.0)
+                    Gss.agents[Gss.agent_index].SetCurrentReward(2.0)
                     break
 
     def CheckBulletPlayerCollision(self):
@@ -1757,14 +1757,14 @@ class Scene:
             if self.player.HasCollision() == True and bullet.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 self.bullets.Remove(bullet)
-                Gss.agents[Gss.agent_index].SetCurrentDefenceReward(1.0)
+                Gss.agents[Gss.agent_index].SetCurrentReward(-1.0)
 
     def CheckEnemyPlayerCollision(self):
         for enemy in self.enemies:
             if self.player.HasCollision() == True and enemy.HasCollision() == True and enemy.CheckCollision(self.player) == True:
                 self.player.AddDamage(1)
                 enemy.AddDamage(1)
-                Gss.agents[Gss.agent_index].SetCurrentDefenceReward(1.0)
+                Gss.agents[Gss.agent_index].SetCurrentReward(-1.0)
 
 
 class EventParser:
@@ -1877,7 +1877,7 @@ class Joystick:
 
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
-    OUTPUT_COUNT = 18
+    OUTPUT_COUNT = 9
     INTERMEDIATE_COUNT = 72
     INTERMEDIATE_LAYER_COUNT = 8
 
@@ -1898,9 +1898,9 @@ class NeuralNetwork(nn.Module):
         self.score = 0
 
     def forward(self, x):
-        x = F.relu(self.input_layer(x))
+        x = F.leaky_relu(self.input_layer(x))
         for layer in self.intermediate_layers:
-            x = F.relu(layer(x))
+            x = F.leaky_relu(layer(x))
         x = self.output_layer(x)
         return x
 
@@ -1988,7 +1988,7 @@ class Trainer:
         self.criterion = nn.SmoothL1Loss()
         self.losses = []
 
-    def Train(self, state, action, attack_reward, defence_reward, next_state):
+    def Train(self, state, action, reward, next_state):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype=torch.float)
         # if len(state.shape) == 1:
@@ -1999,21 +1999,20 @@ class Trainer:
         pred = self.model(next_state).tolist()
         # print("pred: ", pred)
 
-        attack_q_values = pred[0:9]
-        defence_q_values = pred[9:18]
-        next_max_attack_q_value = max(attack_q_values)
-        next_max_defence_q_value = max(defence_q_values)
+        q_values = pred
+        next_max_q_value = max(q_values)
+        next_min_q_value = min(q_values)
+        next_q_value = next_max_q_value
+        if next_q_value < abs(next_min_q_value):
+            next_q_value = next_min_q_value
         # Update the network
         self.optimizer.zero_grad()
         output = self.model(state)
-        attack_q_value = attack_reward + self.gamma * next_max_attack_q_value
-        defence_q_value  = defence_reward + self.gamma * next_max_defence_q_value
+        q_value = reward + self.gamma * next_q_value
         target = []
-        for i in range(18):
+        for i in range(9):
             if i == action:
-                target.append(attack_q_value)
-            elif i >= 9 and (i - 9) == action:
-                target.append(defence_q_value)
+                target.append(q_value)
             else:
                 target.append(output[i])
         target = torch.tensor(target, dtype=torch.float)
@@ -2131,23 +2130,9 @@ class EmulatedJoystick(Joystick):
         inferred = self.neural_network.Infer(values)
         # TODO: Remove below
         self.q_values = inferred
-        attack_q_values = inferred[0:9]
-        defence_q_values = inferred[10:18]
-        max_attack_q_value = max(attack_q_values)
-        max_defence_q_value = max(defence_q_values)
-        min_defence_q_value = min(defence_q_values)
-        # adhoc
-        if self.total_max_defence_q_value < max_defence_q_value:
-            self.total_max_defence_q_value = max_defence_q_value
-        threshold = self.total_max_defence_q_value * 0.7
-        index = attack_q_values.index(max_attack_q_value)
-        # TODO: Make threshold value from Q values?
-        if max_defence_q_value > threshold:
-            index = defence_q_values.index(min_defence_q_value) + 1
-            # print(defence_q_values)
-            # print(min(defence_q_values)[O)
-            # print("threshold: ", threshold)
-            # print("escaping. index, max_defence_q_value: ", index, max_defence_q_value)
+        q_values = inferred
+        max_q_value = max(q_values)
+        index = q_values.index(max_q_value)
         if self.rand.random() < self.epsilon:
             index = self.rand.randrange(9)
 
@@ -2205,9 +2190,8 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.001, 0.90)
-        self.current_attack_reward = 0.0
-        self.current_defence_reward = 0.0
+        self.trainer = Trainer(self.neural_network, 0.001, 0.95)
+        self.current_reward = 0.0
 
     def Clone(self):
         agent = Agent(copy.deepcopy(self.neural_network))
@@ -2228,11 +2212,12 @@ class Agent:
         print("Average loss: {:.5f}".format(average_loss))
 
     def TrainShortMemory(self):
+        # TODO: Remove this
         loop_count = len(self.experiences) - 1
         for i in range(loop_count):
             experience = self.experiences[i]
             next_experience = self.experiences[i + 1]
-            self.trainer.Train(experience[0], experience[1], experience[2], experience[3], next_experience[0])
+            self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
         self.experiences = []
 
     def TrainLongMemory(self):
@@ -2261,27 +2246,20 @@ class Agent:
                 experience = self.experiences[i]
                 # print("babu-", experience[3])
                 next_experience = self.experiences[i + 1]
-                self.trainer.Train(experience[0], experience[1], experience[2], next_experience[3], next_experience[0])
+                self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
         self.experiences = []
 
     def ClearExperiences(self):
         self.experiences = []
 
-    def SetCurrentAttackReward(self, reward):
-        self.current_attack_reward = reward
+    def SetCurrentReward(self, reward):
+        self.current_reward = reward
 
-    def SetCurrentDefenceReward(self, reward):
-        self.current_defence_reward = reward
-
-    def GetCurrentAttackReward(self):
-        return self.current_attack_reward
-
-    def GetCurrentDefenceReward(self):
-        return self.current_defence_reward
+    def GetCurrentReward(self):
+        return self.current_reward
 
     def ClearCurrentRewards(self):
-        self.current_attack_reward = 0.0
-        self.current_defence_reward = 0.0
+        self.current_reward = 0.0
 
     def Cross(self, agent):
         self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE)
@@ -3124,11 +3102,16 @@ class Shooting:
             Shooting.scene.status.IncrementLapTime()
             agent = Gss.agents[Gss.agent_index]
             if Shooting.scene.player.x > FIXED_WIDTH // 2:
-                agent.SetCurrentAttackReward(agent.GetCurrentAttackReward() * 0.1)
-                agent.SetCurrentDefenceReward(agent.GetCurrentDefenceReward() * 2.0)
+                current_reward = agent.GetCurrentReward()
+                if current_reward > 0.0:
+                    agent.SetCurrentReward(current_reward * 0.1)
+                else:
+                    agent.SetCurrentReward(current_reward * 2.0)
             if Shooting.scene.player.x < FIXED_WIDTH // 4:
-                agent.SetCurrentAttackReward(agent.GetCurrentAttackReward() * 1.1)
-            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentAttackReward(), agent.GetCurrentDefenceReward()))
+                current_reward = agent.GetCurrentReward()
+                if current_reward > 0.0:
+                    agent.SetCurrentReward(agent.GetCurrentReward() * 1.1)
+            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward()))
             agent.ClearCurrentRewards()
             if not Gss.settings.GetFrameSkipping() or frame_count == 0:
                 for star in Shooting.scene.stars:
