@@ -2411,7 +2411,7 @@ class Gss:
                 # Run shooting for training
                 enemy_rand.seed(agent_rand.randrange(65536))
                 effect_rand.seed(agent_rand.randrange(65536))
-                agent.SetEpsilon(0.1)
+                agent.SetEpsilon(0.2)
                 agent.UpdateEpsilonSeed()
                 shooting = Shooting()
                 Gss.joystick = EmulatedJoystick(shooting, agent)
