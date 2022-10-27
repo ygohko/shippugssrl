@@ -2018,7 +2018,6 @@ class Trainer:
         target = torch.tensor(target, dtype=torch.float)
         # target = torch.unsqueeze(target, 0)
         loss = self.criterion(output, target)
-        self.losses.append(float(loss))
         loss.backward()
         self.optimizer.step()
 
@@ -2134,7 +2133,7 @@ class EmulatedJoystick(Joystick):
         max_q_value = max(q_values)
         index = q_values.index(max_q_value)
         epsilon = self.epsilon
-        if self.position < self.agent.GetFrameScore() - 2000.0:
+        if self.position < self.agent.GetFrameScore() - 1000.0:
             epsilon = 0.0
         if self.rand.random() < epsilon:
             index = self.rand.randrange(9)
@@ -2211,6 +2210,8 @@ class Agent:
 
     def Train(self):
         self.TrainLongMemory()
+        # TODO: Remove the losses parameter
+        self.trainer.ClearLosses()
 
     def TrainShortMemory(self):
         # TODO: Remove this
