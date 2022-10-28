@@ -2018,7 +2018,6 @@ class Trainer:
         target = torch.tensor(target, dtype=torch.float)
         # target = torch.unsqueeze(target, 0)
         loss = self.criterion(output, target)
-        self.losses.append(float(loss))
         loss.backward()
         self.optimizer.step()
 
@@ -2133,7 +2132,10 @@ class EmulatedJoystick(Joystick):
         q_values = inferred
         max_q_value = max(q_values)
         index = q_values.index(max_q_value)
-        if self.rand.random() < self.epsilon:
+        epsilon = self.epsilon
+        if self.position < self.agent.GetFrameScore() - 1000.0:
+            epsilon = 0.0
+        if self.rand.random() < epsilon:
             index = self.rand.randrange(9)
 
         self.pressed = 0
@@ -2208,8 +2210,8 @@ class Agent:
 
     def Train(self):
         self.TrainLongMemory()
-        average_loss = self.GetAverageLoss()
-        print("Average loss: {:.5f}".format(average_loss))
+        # TODO: Remove the losses parameter
+        self.trainer.ClearLosses()
 
     def TrainShortMemory(self):
         # TODO: Remove this
@@ -2409,15 +2411,16 @@ class Gss:
             agent = Gss.agents[Gss.agent_index]
             if Gss.agent_index > 0:
                 # Run shooting for training
-                enemy_rand.seed(agent_rand.randrange(65536))
-                effect_rand.seed(agent_rand.randrange(65536))
-                agent.SetEpsilon(0.1)
+                enemy_rand.seed(123)
+                effect_rand.seed(456)
+                agent.SetEpsilon(0.2)
                 agent.UpdateEpsilonSeed()
                 shooting = Shooting()
                 Gss.joystick = EmulatedJoystick(shooting, agent)
                 shooting.MainLoop()
                 agent.Train()
                 agent.ClearExperiences()
+                print("Training, Frame score: {:.1f}".format(shooting.scene.status.agent_frame_score))
             if not Gss.settings.GetEliteSkipping() or Gss.agent_index > 0:
                 # Run shooting for scoring
                 enemy_rand.seed(123)
