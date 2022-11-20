@@ -1878,7 +1878,7 @@ class Joystick:
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
     OUTPUT_COUNT = 9
-    INTERMEDIATE_COUNT = 72
+    INTERMEDIATE_COUNT = 200
     INTERMEDIATE_LAYER_COUNT = 8
 
     instance = None
