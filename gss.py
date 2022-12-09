@@ -1878,7 +1878,7 @@ class Joystick:
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
     OUTPUT_COUNT = 9
-    INTERMEDIATE_COUNT = 200
+    INTERMEDIATE_COUNT = 300
     INTERMEDIATE_LAYER_COUNT = 8
 
     instance = None
@@ -2192,7 +2192,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.001, 0.95)
+        self.trainer = Trainer(self.neural_network, 0.002, 0.95)
         self.current_reward = 0.0
 
     def Clone(self):
