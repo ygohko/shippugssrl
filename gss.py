@@ -1878,7 +1878,7 @@ class Joystick:
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
     OUTPUT_COUNT = 9
-    INTERMEDIATE_COUNT = 300
+    INTERMEDIATE_COUNT = 400
     INTERMEDIATE_LAYER_COUNT = 8
 
     instance = None
@@ -2192,7 +2192,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.002, 0.95)
+        self.trainer = Trainer(self.neural_network, 0.005, 0.95)
         self.current_reward = 0.0
 
     def Clone(self):
@@ -3104,7 +3104,8 @@ class Shooting:
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
             agent = Gss.agents[Gss.agent_index]
-            if Shooting.scene.player.x > FIXED_WIDTH // 2:
+            action_value = Gss.joystick.GetActionValue()
+            if Shooting.scene.player.x > FIXED_WIDTH // 2 and action_value >= 2 and action_value <= 4:
                 current_reward = agent.GetCurrentReward()
                 if current_reward > 0.0:
                     agent.SetCurrentReward(current_reward * 0.1)
@@ -3114,7 +3115,7 @@ class Shooting:
                 current_reward = agent.GetCurrentReward()
                 if current_reward > 0.0:
                     agent.SetCurrentReward(agent.GetCurrentReward() * 1.1)
-            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward()))
+            agent.Remember((Gss.joystick.GetStateValues(), action_value, agent.GetCurrentReward()))
             agent.ClearCurrentRewards()
             if not Gss.settings.GetFrameSkipping() or frame_count == 0:
                 for star in Shooting.scene.stars:
