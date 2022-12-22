@@ -280,9 +280,8 @@ class Player(Actor):
                 # agent.SetCurrentReward(0.1)
                 # Shooting.scene.status.UpdatePenalty(0.1)
             living_cnt += 1
-            if self.x > Fixed(320):
-                pass
-                # agent.SetCurrentReward(0.1)
+            if self.x > (FIXED_WIDTH * 3) // 4:
+                Shooting.scene.status.UpdatePenalty(0.1)
             shot_cnt += 1
             shot_cnt &= 3
             synchro_shot_cnt = shot_cnt & 1
@@ -1691,10 +1690,13 @@ class Status:
         self.agent_destruction_score = float(self.score)
         self.agent_frame_score = float(self.frame_count)
         self.agent_event_score = float(ScreenInt(self.event_count))
-        self.agent_score = (self.agent_destruction_score * Status.destruction_scale + self.agent_frame_score * Status.frame_scale + self.agent_event_score * Status.event_scale + agent_rand.random()) * self.penalty
+        self.agent_score = (self.agent_destruction_score * Status.destruction_scale + self.agent_frame_score * Status.frame_scale + self.agent_event_score * Status.event_scale + agent_rand.random())
 
     def GetCompleted(self):
         return self.completed
+
+    def GetPenalty(self):
+        return self.penalty
 
     def UpdatePenalty(self, penalty):
         if self.penalty > penalty:
@@ -1878,7 +1880,7 @@ class Joystick:
 class NeuralNetwork(nn.Module):
     INPUT_COUNT = 28
     OUTPUT_COUNT = 9
-    INTERMEDIATE_COUNT = 300
+    INTERMEDIATE_COUNT = 400
     INTERMEDIATE_LAYER_COUNT = 8
 
     instance = None
@@ -2185,6 +2187,7 @@ class Agent:
             self.neural_network = NeuralNetwork()
         else:
             self.neural_network = neural_network
+        self.previous_neural_network = None
         self.epsilon = 0.0
         self.epsilon_seed = agent_rand.randrange(65535)
         self.score = 0
@@ -2192,7 +2195,7 @@ class Agent:
         self.frame_score = 0
         self.event_score = 0
         self.experiences = []
-        self.trainer = Trainer(self.neural_network, 0.002, 0.95)
+        self.trainer = Trainer(self.neural_network, 0.005, 0.95)
         self.current_reward = 0.0
 
     def Clone(self):
@@ -2209,6 +2212,7 @@ class Agent:
         self.experiences.append(experience)
 
     def Train(self):
+        self.previous_neural_network = copy.deepcopy(self.neural_network)
         self.TrainLongMemory()
         # TODO: Remove the losses parameter
         self.trainer.ClearLosses()
@@ -2250,6 +2254,11 @@ class Agent:
                 next_experience = self.experiences[i + 1]
                 self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
         self.experiences = []
+
+    def Rollback(self):
+        self.neural_network = copy.deepcopy(self.previous_neural_network)
+        self.trainer = Trainer(self.neural_network, 0.005, 0.95)
+        self.previous_neural_network = None
 
     def ClearExperiences(self):
         self.experiences = []
@@ -2438,7 +2447,11 @@ class Gss:
                 agent.SetFrameScore(frame_score)
                 event_score = shooting.scene.status.agent_event_score
                 agent.SetEventScore(event_score)
+                if Shooting.scene.status.GetPenalty() < 1.0:
+                    agent.Rollback()
+                    print("Neural network rollbacked.")
             print("Generation: {}, Agent: {}, Score: {:.1f}, Destruction score: {:.1f}, Frame score: {:.1f}, Event score: {:.1f}".format(self.generation, self.agent_index, agent.GetScore(), agent.GetDestructionScore(), agent.GetFrameScore(), agent.GetEventScore()))
+
             Gss.joystick = Joystick()
             Gss.agent_index += 1
             if Gss.agent_index >= Gss.AGENT_NUM:
@@ -3104,7 +3117,8 @@ class Shooting:
             Shooting.scene.CheckEnemyPlayerCollision()
             Shooting.scene.status.IncrementLapTime()
             agent = Gss.agents[Gss.agent_index]
-            if Shooting.scene.player.x > FIXED_WIDTH // 2:
+            action_value = Gss.joystick.GetActionValue()
+            if Shooting.scene.player.x > FIXED_WIDTH // 2 and action_value >= 2 and action_value <= 4:
                 current_reward = agent.GetCurrentReward()
                 if current_reward > 0.0:
                     agent.SetCurrentReward(current_reward * 0.1)
@@ -3114,7 +3128,7 @@ class Shooting:
                 current_reward = agent.GetCurrentReward()
                 if current_reward > 0.0:
                     agent.SetCurrentReward(agent.GetCurrentReward() * 1.1)
-            agent.Remember((Gss.joystick.GetStateValues(), Gss.joystick.GetActionValue(), agent.GetCurrentReward()))
+            agent.Remember((Gss.joystick.GetStateValues(), action_value, agent.GetCurrentReward()))
             agent.ClearCurrentRewards()
             if not Gss.settings.GetFrameSkipping() or frame_count == 0:
                 for star in Shooting.scene.stars:
