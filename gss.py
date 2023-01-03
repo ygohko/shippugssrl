@@ -1900,10 +1900,6 @@ class NeuralNetwork(nn.Module):
         x = self.output_layer(x)
         return x
 
-    def Load(self, genes):
-        # TODO: Remove this
-        pass
-
     def Infer(self, values):
         results = self(torch.tensor(values)).tolist()
         # print("results:", results);
@@ -2457,7 +2453,7 @@ class Title:
     def __init__(self):
         self.logo = Logo()
         self.typewritertext = TypewriterText((TypewriterString(216, 256, "VERSION %s" % VERSION), TypewriterString(160, 384, "(C)2005 - 2020 GONY."), TypewriterString(136, 416,
-                                                                                                                                                                       "DEDICATED TO KENYA ABE."), TypewriterString(272, 48, "SHIPPU"), TypewriterString(464, 240, "NN"), TypewriterString(224, 320, "PRESS BUTTON")))
+                                                                                                                                                                       "DEDICATED TO KENYA ABE."), TypewriterString(272, 48, "SHIPPU"), TypewriterString(464, 240, "RL"), TypewriterString(224, 320, "PRESS BUTTON")))
         self.gen = self.Move()
 
     def MainLoop(self):
