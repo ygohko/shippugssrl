@@ -260,7 +260,6 @@ class Player(Actor):
 
     def Move(self):
         shot_cnt = 0
-        living_cnt = 0
         agent = Gss.agents[Gss.agent_index]
         while True:
             pressed = Gss.joystick.GetPressed()
@@ -275,11 +274,6 @@ class Player(Actor):
             old_x = self.x
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
-            if self.x != old_x or self.y != old_y:
-                pass
-                # agent.SetCurrentReward(0.1)
-                # Shooting.scene.status.UpdatePenalty(0.1)
-            living_cnt += 1
             if self.x > (FIXED_WIDTH * 3) // 4:
                 Shooting.scene.status.UpdatePenalty(0.1)
             shot_cnt += 1
@@ -1993,14 +1987,9 @@ class Trainer:
     def Train(self, state, action, reward, next_state):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype=torch.float)
-        # if len(state.shape) == 1:
-        #     state = torch.unsqueeze(state, 0)
-        #     next_state = torch.unsqueeze(next_state, 0)
 
         # Predict next maximum Q value
         pred = self.model(next_state).tolist()
-        # print("pred: ", pred)
-
         q_values = pred
         next_max_q_value = max(q_values)
         next_min_q_value = min(q_values)
@@ -2018,7 +2007,6 @@ class Trainer:
             else:
                 target.append(output[i])
         target = torch.tensor(target, dtype=torch.float)
-        # target = torch.unsqueeze(target, 0)
         loss = self.criterion(output, target)
         loss.backward()
         self.optimizer.step()
@@ -2043,7 +2031,6 @@ class EmulatedJoystick(Joystick):
         self.rand.seed(agent.GetEpsilonSeed())
         self.epsilon = agent.GetEpsilon()
         self.state_values = []
-        self.q_values = []
         self.action_value = 0
         self.total_max_defence_q_value = 0.0
 
@@ -2129,8 +2116,6 @@ class EmulatedJoystick(Joystick):
             value = (y - (SCREEN_HEIGHT - 100.0)) / 100.0
         values[27] = value
         inferred = self.neural_network.Infer(values)
-        # TODO: Remove below
-        self.q_values = inferred
         q_values = inferred
         max_q_value = max(q_values)
         index = q_values.index(max_q_value)
@@ -2170,9 +2155,6 @@ class EmulatedJoystick(Joystick):
 
     def GetStateValues(self):
         return self.state_values
-
-    def GetQValues(self):
-        return self.q_values
 
     def GetActionValue(self):
         return self.action_value
@@ -2217,42 +2199,21 @@ class Agent:
         # TODO: Remove the losses parameter
         self.trainer.ClearLosses()
 
-    def TrainShortMemory(self):
-        # TODO: Remove this
+    def TrainLongMemory(self):
+        self.neural_network.SetScore(self.score)
         loop_count = len(self.experiences) - 1
+        a_indices = []
         for i in range(loop_count):
+            a_indices.append(i)
+        indices = []
+        for i in range(loop_count):
+            index = a_indices[agent_rand.randrange(len(a_indices))]
+            a_indices.remove(index)
+            indices.append(index)
+        for i in indices:
             experience = self.experiences[i]
             next_experience = self.experiences[i + 1]
             self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
-        self.experiences = []
-
-    def TrainLongMemory(self):
-        self.neural_network.SetScore(self.score)
-        # previous_neural_network = NeuralNetwork.GetPrevious()
-        # print("Current score: ", self.score)
-        # if previous_neural_network != None:
-        #     print("Previous score: ", previous_neural_network.GetScore())
-        if False: # previous_neural_network != None and self.score < previous_neural_network.GetScore():
-            pass
-        #     print("Neural network rollbacked.")
-        #     self.neural_network = copy.deepcopy(NeuralNetwork.GetPrevious())
-        else:
-            # NeuralNetwork.UpdatePrevious(self.neural_network)
-            # TODO: Serialize the neural network
-            loop_count = len(self.experiences) - 1
-            a_indices = []
-            for i in range(loop_count):
-                a_indices.append(i)
-            indices = []
-            for i in range(loop_count):
-                index = a_indices[agent_rand.randrange(len(a_indices))]
-                a_indices.remove(index)
-                indices.append(index)
-            for i in indices:
-                experience = self.experiences[i]
-                # print("babu-", experience[3])
-                next_experience = self.experiences[i + 1]
-                self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
         self.experiences = []
 
     def Rollback(self):
