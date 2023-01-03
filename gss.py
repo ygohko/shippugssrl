@@ -1917,22 +1917,6 @@ class NeuralNetwork(nn.Module):
         NeuralNetwork.CrossModule(self.linear5, neural_network.linear5, mutation_rate)
         NeuralNetwork.CrossModule(self.linear6, neural_network.linear5, mutation_rate)
 
-    def Clone(self):
-        neural_network = NeuralNetwork()
-
-        print("babu-", neural_network.linear1.weight[0, 0])
-
-        NeuralNetwork.CopyModule(neural_network.linear1, self.linear1)
-        NeuralNetwork.CopyModule(neural_network.linear2, self.linear2)
-        NeuralNetwork.CopyModule(neural_network.linear3, self.linear3)
-        NeuralNetwork.CopyModule(neural_network.linear4, self.linear4)
-        NeuralNetwork.CopyModule(neural_network.linear5, self.linear5)
-        NeuralNetwork.CopyModule(neural_network.linear6, self.linear5)
-
-        print("ogya---", neural_network.linear1.weight[0, 0])
-
-        return neural_network
-
     def GetScore(self):
         return self.score
 
