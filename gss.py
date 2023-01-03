@@ -1909,14 +1909,6 @@ class NeuralNetwork(nn.Module):
         # print("results:", results);
         return results
 
-    def Cross(self, neural_network, mutation_rate):
-        NeuralNetwork.CrossModule(self.linear1, neural_network.linear1, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear2, neural_network.linear2, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear3, neural_network.linear3, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear4, neural_network.linear4, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear5, neural_network.linear5, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear6, neural_network.linear5, mutation_rate)
-
     def GetScore(self):
         return self.score
 
@@ -1930,23 +1922,6 @@ class NeuralNetwork(nn.Module):
     def UpdatePrevious(cls, neural_network):
         NeuralNetwork.previous = copy.deepcopy(neural_network)
     UpdatePrevious = classmethod(UpdatePrevious)
-
-    def CrossModule(cls, a_module, b_module, mutation_rate):
-        a_data = a_module.weight.data
-        b_data = b_module.weight.data
-        size = a_data.size()
-        row_count = size[0]
-        column_count = size[1]
-        for i in range(row_count):
-            for j in range(column_count):
-                if agent_rand.random() < mutation_rate:
-                    a_data[i, j] = agent_rand.random() * 2.0 - 1.0
-                    b_data[i, j] = agent_rand.random() * 2.0 - 1.0
-                elif agent_rand.randrange(2) == 1:
-                    value = float(a_data[i, j])
-                    a_data[i, j] = float(b_data[i, j])
-                    b_data[i, j] = value
-    CrossModule = classmethod(CrossModule)
 
     def CopyModule(cls, a_module, b_module):
         a_data = a_module.weight.data
@@ -2207,24 +2182,6 @@ class Agent:
 
     def ClearCurrentRewards(self):
         self.current_reward = 0.0
-
-    def Cross(self, agent):
-        self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE)
-
-    def CrossWithBCXAlpha(self, agent):
-        for i in range(len(self.genes)):
-            if agent_rand.random() <= Agent.MUTATION_RATE * 0.01:
-                self.genes[i] = agent_rand.random() * 2.0 - 1.0
-                agent.genes[i] = agent_rand.random() * 2.0 - 1.0
-            else:
-                min_value = min(self.genes[i], agent.genes[i])
-                max_value = max(self.genes[i], agent.genes[i])
-                diff = max_value - min_value
-                min_value -= diff * Agent.ALPHA
-                diff += diff * Agent.ALPHA * 2.0
-                ratio = agent_rand.random()
-                self.genes[i] = min_value + diff * ratio
-                agent.genes[i] = min_value + diff * (1.0 - ratio)
 
     def GetGenes(self):
         return self.genes
