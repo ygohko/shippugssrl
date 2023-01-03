@@ -1982,7 +1982,6 @@ class Trainer:
         self.model = model
         self.optimizer = optim.SGD(model.parameters(), lr=self.lr)
         self.criterion = nn.SmoothL1Loss()
-        self.losses = []
 
     def Train(self, state, action, reward, next_state):
         state = torch.tensor(state, dtype=torch.float)
@@ -2010,12 +2009,6 @@ class Trainer:
         loss = self.criterion(output, target)
         loss.backward()
         self.optimizer.step()
-
-    def GetLosses(self):
-        return self.losses
-
-    def ClearLosses(self):
-        self.losses = []
 
 
 class EmulatedJoystick(Joystick):
@@ -2196,8 +2189,6 @@ class Agent:
     def Train(self):
         self.previous_neural_network = copy.deepcopy(self.neural_network)
         self.TrainLongMemory()
-        # TODO: Remove the losses parameter
-        self.trainer.ClearLosses()
 
     def TrainLongMemory(self):
         self.neural_network.SetScore(self.score)
@@ -2292,15 +2283,6 @@ class Agent:
 
     def UpdateEpsilonSeed(self):
         self.epsilon_seed = agent_rand.randrange(65535)
-
-    def GetAverageLoss(self):
-        losses = self.trainer.GetLosses()
-        total = 0.0
-        for loss in losses:
-            total += loss
-        average = total / len(losses)
-        self.trainer.ClearLosses()
-        return average
 
     def GetAlternated(cls, agents):
         elite = None
