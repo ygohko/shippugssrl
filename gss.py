@@ -260,7 +260,6 @@ class Player(Actor):
 
     def Move(self):
         shot_cnt = 0
-        living_cnt = 0
         agent = Gss.agents[Gss.agent_index]
         while True:
             pressed = Gss.joystick.GetPressed()
@@ -275,11 +274,6 @@ class Player(Actor):
             old_x = self.x
             old_y = self.y
             self.x, self.y = self.collision.RoundToSceneLimit(self.x, self.y)
-            if self.x != old_x or self.y != old_y:
-                pass
-                # agent.SetCurrentReward(0.1)
-                # Shooting.scene.status.UpdatePenalty(0.1)
-            living_cnt += 1
             if self.x > (FIXED_WIDTH * 3) // 4:
                 Shooting.scene.status.UpdatePenalty(0.1)
             shot_cnt += 1
@@ -1906,38 +1900,10 @@ class NeuralNetwork(nn.Module):
         x = self.output_layer(x)
         return x
 
-    def Load(self, genes):
-        # TODO: Remove this
-        pass
-
     def Infer(self, values):
         results = self(torch.tensor(values)).tolist()
         # print("results:", results);
         return results
-
-    def Cross(self, neural_network, mutation_rate):
-        NeuralNetwork.CrossModule(self.linear1, neural_network.linear1, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear2, neural_network.linear2, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear3, neural_network.linear3, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear4, neural_network.linear4, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear5, neural_network.linear5, mutation_rate)
-        NeuralNetwork.CrossModule(self.linear6, neural_network.linear5, mutation_rate)
-
-    def Clone(self):
-        neural_network = NeuralNetwork()
-
-        print("babu-", neural_network.linear1.weight[0, 0])
-
-        NeuralNetwork.CopyModule(neural_network.linear1, self.linear1)
-        NeuralNetwork.CopyModule(neural_network.linear2, self.linear2)
-        NeuralNetwork.CopyModule(neural_network.linear3, self.linear3)
-        NeuralNetwork.CopyModule(neural_network.linear4, self.linear4)
-        NeuralNetwork.CopyModule(neural_network.linear5, self.linear5)
-        NeuralNetwork.CopyModule(neural_network.linear6, self.linear5)
-
-        print("ogya---", neural_network.linear1.weight[0, 0])
-
-        return neural_network
 
     def GetScore(self):
         return self.score
@@ -1952,23 +1918,6 @@ class NeuralNetwork(nn.Module):
     def UpdatePrevious(cls, neural_network):
         NeuralNetwork.previous = copy.deepcopy(neural_network)
     UpdatePrevious = classmethod(UpdatePrevious)
-
-    def CrossModule(cls, a_module, b_module, mutation_rate):
-        a_data = a_module.weight.data
-        b_data = b_module.weight.data
-        size = a_data.size()
-        row_count = size[0]
-        column_count = size[1]
-        for i in range(row_count):
-            for j in range(column_count):
-                if agent_rand.random() < mutation_rate:
-                    a_data[i, j] = agent_rand.random() * 2.0 - 1.0
-                    b_data[i, j] = agent_rand.random() * 2.0 - 1.0
-                elif agent_rand.randrange(2) == 1:
-                    value = float(a_data[i, j])
-                    a_data[i, j] = float(b_data[i, j])
-                    b_data[i, j] = value
-    CrossModule = classmethod(CrossModule)
 
     def CopyModule(cls, a_module, b_module):
         a_data = a_module.weight.data
@@ -1988,19 +1937,13 @@ class Trainer:
         self.model = model
         self.optimizer = optim.SGD(model.parameters(), lr=self.lr)
         self.criterion = nn.SmoothL1Loss()
-        self.losses = []
 
     def Train(self, state, action, reward, next_state):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype=torch.float)
-        # if len(state.shape) == 1:
-        #     state = torch.unsqueeze(state, 0)
-        #     next_state = torch.unsqueeze(next_state, 0)
 
         # Predict next maximum Q value
         pred = self.model(next_state).tolist()
-        # print("pred: ", pred)
-
         q_values = pred
         next_max_q_value = max(q_values)
         next_min_q_value = min(q_values)
@@ -2018,16 +1961,9 @@ class Trainer:
             else:
                 target.append(output[i])
         target = torch.tensor(target, dtype=torch.float)
-        # target = torch.unsqueeze(target, 0)
         loss = self.criterion(output, target)
         loss.backward()
         self.optimizer.step()
-
-    def GetLosses(self):
-        return self.losses
-
-    def ClearLosses(self):
-        self.losses = []
 
 
 class EmulatedJoystick(Joystick):
@@ -2043,7 +1979,6 @@ class EmulatedJoystick(Joystick):
         self.rand.seed(agent.GetEpsilonSeed())
         self.epsilon = agent.GetEpsilon()
         self.state_values = []
-        self.q_values = []
         self.action_value = 0
         self.total_max_defence_q_value = 0.0
 
@@ -2129,8 +2064,6 @@ class EmulatedJoystick(Joystick):
             value = (y - (SCREEN_HEIGHT - 100.0)) / 100.0
         values[27] = value
         inferred = self.neural_network.Infer(values)
-        # TODO: Remove below
-        self.q_values = inferred
         q_values = inferred
         max_q_value = max(q_values)
         index = q_values.index(max_q_value)
@@ -2170,9 +2103,6 @@ class EmulatedJoystick(Joystick):
 
     def GetStateValues(self):
         return self.state_values
-
-    def GetQValues(self):
-        return self.q_values
 
     def GetActionValue(self):
         return self.action_value
@@ -2214,45 +2144,22 @@ class Agent:
     def Train(self):
         self.previous_neural_network = copy.deepcopy(self.neural_network)
         self.TrainLongMemory()
-        # TODO: Remove the losses parameter
-        self.trainer.ClearLosses()
-
-    def TrainShortMemory(self):
-        # TODO: Remove this
-        loop_count = len(self.experiences) - 1
-        for i in range(loop_count):
-            experience = self.experiences[i]
-            next_experience = self.experiences[i + 1]
-            self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
-        self.experiences = []
 
     def TrainLongMemory(self):
         self.neural_network.SetScore(self.score)
-        # previous_neural_network = NeuralNetwork.GetPrevious()
-        # print("Current score: ", self.score)
-        # if previous_neural_network != None:
-        #     print("Previous score: ", previous_neural_network.GetScore())
-        if False: # previous_neural_network != None and self.score < previous_neural_network.GetScore():
-            pass
-        #     print("Neural network rollbacked.")
-        #     self.neural_network = copy.deepcopy(NeuralNetwork.GetPrevious())
-        else:
-            # NeuralNetwork.UpdatePrevious(self.neural_network)
-            # TODO: Serialize the neural network
-            loop_count = len(self.experiences) - 1
-            a_indices = []
-            for i in range(loop_count):
-                a_indices.append(i)
-            indices = []
-            for i in range(loop_count):
-                index = a_indices[agent_rand.randrange(len(a_indices))]
-                a_indices.remove(index)
-                indices.append(index)
-            for i in indices:
-                experience = self.experiences[i]
-                # print("babu-", experience[3])
-                next_experience = self.experiences[i + 1]
-                self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
+        loop_count = len(self.experiences) - 1
+        a_indices = []
+        for i in range(loop_count):
+            a_indices.append(i)
+        indices = []
+        for i in range(loop_count):
+            index = a_indices[agent_rand.randrange(len(a_indices))]
+            a_indices.remove(index)
+            indices.append(index)
+        for i in indices:
+            experience = self.experiences[i]
+            next_experience = self.experiences[i + 1]
+            self.trainer.Train(experience[0], experience[1], experience[2], next_experience[0])
         self.experiences = []
 
     def Rollback(self):
@@ -2271,24 +2178,6 @@ class Agent:
 
     def ClearCurrentRewards(self):
         self.current_reward = 0.0
-
-    def Cross(self, agent):
-        self.neural_network.Cross(agent.neural_network, Agent.MUTATION_RATE)
-
-    def CrossWithBCXAlpha(self, agent):
-        for i in range(len(self.genes)):
-            if agent_rand.random() <= Agent.MUTATION_RATE * 0.01:
-                self.genes[i] = agent_rand.random() * 2.0 - 1.0
-                agent.genes[i] = agent_rand.random() * 2.0 - 1.0
-            else:
-                min_value = min(self.genes[i], agent.genes[i])
-                max_value = max(self.genes[i], agent.genes[i])
-                diff = max_value - min_value
-                min_value -= diff * Agent.ALPHA
-                diff += diff * Agent.ALPHA * 2.0
-                ratio = agent_rand.random()
-                self.genes[i] = min_value + diff * ratio
-                agent.genes[i] = min_value + diff * (1.0 - ratio)
 
     def GetGenes(self):
         return self.genes
@@ -2331,15 +2220,6 @@ class Agent:
 
     def UpdateEpsilonSeed(self):
         self.epsilon_seed = agent_rand.randrange(65535)
-
-    def GetAverageLoss(self):
-        losses = self.trainer.GetLosses()
-        total = 0.0
-        for loss in losses:
-            total += loss
-        average = total / len(losses)
-        self.trainer.ClearLosses()
-        return average
 
     def GetAlternated(cls, agents):
         elite = None
@@ -2573,7 +2453,7 @@ class Title:
     def __init__(self):
         self.logo = Logo()
         self.typewritertext = TypewriterText((TypewriterString(216, 256, "VERSION %s" % VERSION), TypewriterString(160, 384, "(C)2005 - 2020 GONY."), TypewriterString(136, 416,
-                                                                                                                                                                       "DEDICATED TO KENYA ABE."), TypewriterString(272, 48, "SHIPPU"), TypewriterString(464, 240, "NN"), TypewriterString(224, 320, "PRESS BUTTON")))
+                                                                                                                                                                       "DEDICATED TO KENYA ABE."), TypewriterString(272, 48, "SHIPPU"), TypewriterString(464, 240, "RL"), TypewriterString(224, 320, "PRESS BUTTON")))
         self.gen = self.Move()
 
     def MainLoop(self):
